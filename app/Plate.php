@@ -6,5 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Plate extends Model
 {
-    //
+    
+    protected $guarded = ['quantity'];
 }

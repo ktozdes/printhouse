@@ -15,12 +15,13 @@ class CreateOrdersTable extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->boolean('c')->nullable()->default(true);
-            $table->boolean('m')->nullable()->default(true);
-            $table->boolean('y')->nullable()->default(true);
-            $table->boolean('k')->nullable()->default(true);
+            $table->boolean('c')->nullable()->default(false);
+            $table->boolean('m')->nullable()->default(false);
+            $table->boolean('y')->nullable()->default(false);
+            $table->boolean('k')->nullable()->default(false);
             $table->boolean('urgent')->default(false);
-            $table->boolean('deliver')->default(true);
+            $table->boolean('deliver')->default(false);
+            $table->string('address')->nullable();
             $table->text('comment')->nullable();
             
             $table->integer('quantity')->default(0);

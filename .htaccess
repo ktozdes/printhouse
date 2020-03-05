@@ -19,3 +19,8 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+
+php_value upload_max_filesize 1000M
+php_value post_max_size 2000M
+php_value memory_limit 3200M

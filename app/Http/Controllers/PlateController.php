@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Plate;
+use App\Storage;
 use Illuminate\Http\Request;
 
 class PlateController extends Controller
@@ -15,6 +16,22 @@ class PlateController extends Controller
     public function index()
     {
         //
+    }
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function list(Request $request)
+    {
+        $plates =  ($request->user->hasRole('super-admin')) 
+            ? Plate::all()
+            : Plate::all('id', 'name', 'specification', 'producer', 'width', 'height', 'thickness', 'measurement_unit');
+        
+        return response()->json([
+            'plates' => $plates
+        ]);
+        //return response()->json('plates' =>$plates]);
     }
 
     /**
@@ -35,7 +52,27 @@ class PlateController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'plate.name'=>'required'
+        ]);
+
+        $plate = new Plate($request->plate);
+        $plate->save();
+
+        if (isset($request->storage['quantity']) && $request->storage['quantity'] > 0) {
+            $storage = new Storage($request->storage);
+            $storage->manager_id = $request->user->id;
+            $storage->plate_id = $plate->id;
+            $storage->save();
+        }
+        
+        return response()->json([
+            'status' => 'success',
+            'plate' => $plate,
+            'storage' => $storage,
+            'message' => 'Заказ Создан',
+        ]);
+        
     }
 
     /**
