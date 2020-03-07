@@ -3,6 +3,7 @@
 /public/pdf/*
 /wback/*
 /public/storage
+/public/uploads
 /storage/*.key
 /vendor
 .env
