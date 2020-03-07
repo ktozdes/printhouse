@@ -21,7 +21,7 @@ class CreatePlatesTable extends Migration
             $table->integer('quantity')->default(0);
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();
-            $table->integer('thickness')->nullable();
+            $table->string('thickness')->nullable();
             $table->string('measurement_unit')->default('mm');
             $table->timestamps();
         });

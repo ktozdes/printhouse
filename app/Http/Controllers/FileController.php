@@ -75,7 +75,6 @@ class FileController extends Controller
                 'message' => 'PDF файл загружен.',
                 'file_id' => $filable->id,
                 'file' => $filable,
-                'dddd' => $request->file('file'),
             ]);
         }
         else {

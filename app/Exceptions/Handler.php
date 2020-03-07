@@ -4,6 +4,7 @@ namespace App\Exceptions;
 
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 class Handler extends ExceptionHandler
 {
@@ -50,6 +51,13 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
+        if ($exception instanceof UnauthorizedException) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'У вас недостаточно прав.',
+            'responseStatus'  => 401,
+        ]);
+    }
         return parent::render($request, $exception);
     }
 }

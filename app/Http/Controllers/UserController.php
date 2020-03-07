@@ -12,6 +12,18 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function paymentlist(Request $request)
+    {
+        $users = User::role('client')->get(['id', 'name', 'fullname', 'company', 'balance', 'rank', 'balance']);
+        
+        return response()->json([
+            'status' => 'success',
+            'users' => $users
+        ]);
+        //return response()->json('plates' =>$plates]);
+    }
+
     public function index()
     {
         //

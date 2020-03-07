@@ -157,7 +157,7 @@ class OrderController extends Controller
 
         if ( $request->user->hasRole('client') && ($order->user_id != $request->user->id || (
             $order->user_id == $request->user->id && $order->status_id != 1))){
-            return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя изменить'], 400);
+            return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя изменить'], 403);
         }
         $order->status_id = 1;
         $order->plate_id = $request->order['plateId'];
@@ -198,7 +198,7 @@ class OrderController extends Controller
         ])->first();
 
         if (empty($order)) {
-            return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя удалить или его нет'], 400);
+            return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя удалить или его нет'], 403);
         }
 
         if (empty($file)) {

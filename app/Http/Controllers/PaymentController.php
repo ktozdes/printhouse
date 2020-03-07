@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Payment;
 use Illuminate\Http\Request;
+use App\Events\PaymentWasCreated;
 
 class PaymentController extends Controller
 {
@@ -35,7 +36,22 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'payment.amount'=>'required',
+            'payment.user_id'=>'required:integer'
+        ]);
+
+        $payment = new Payment($request->payment);
+        $payment->manager_id = $request->user->id;
+        $payment->save();
+
+        event(new PaymentWasCreated($payment));
+        
+        return response()->json([
+            'status' => 'success',
+            'payment' => $payment,
+            'message' => 'Оплата Создана',
+        ]);
     }
 
     /**
