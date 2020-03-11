@@ -50,4 +50,13 @@ class User extends Authenticatable
         while($this->where('api_token', $this->api_token)->exists());
         $this->save();
     }
+    public function plates()
+    {
+        return $this->belongsToMany('App\Plate');
+    }
+    public function pricing()
+    {
+        return $this->hasMany('App\PlateUser');
+    }
+
 }

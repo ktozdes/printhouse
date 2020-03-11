@@ -20,7 +20,9 @@ Route::post('/signback', 'Auth\LoginController@signback')->middleware(['cors']);
 Route::post('/register', 'Auth\LoginController@register')->middleware(['cors']);
 
 Route::get('/show', 'UserController@show')->middleware(['cors', 'token']);
-Route::get('/user/paymentlist', 'UserController@paymentlist')->middleware(['cors', 'token', 'permission:menu payment']);
+Route::post('/user/update', 'UserController@update')->middleware(['cors', 'token']);
+Route::get('/user/list', 'UserController@list')->middleware(['cors', 'token', 'permission:menu user']);
+Route::get('/user/edit', 'UserController@edit')->middleware(['cors', 'token']);
 
 Route::get('/plate/list', 'PlateController@list')->middleware(['cors', 'token', 'role:super-admin']);
 Route::get('/plate/edit', 'PlateController@edit')->middleware(['cors', 'token', 'role:super-admin']);

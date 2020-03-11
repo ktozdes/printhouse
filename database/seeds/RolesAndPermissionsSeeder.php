@@ -29,7 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // create menu permissions
         Permission::create(['name' => 'menu order']);
         Permission::create(['name' => 'menu report']);
-        Permission::create(['name' => 'menu profile']);
+        Permission::create(['name' => 'menu user']);
         Permission::create(['name' => 'menu storage']);
         Permission::create(['name' => 'menu payment']);
 
@@ -48,12 +48,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // this can be done as separate statements
         $clientRole->givePermissionTo([
-        	'menu order', 'menu report', 'menu profile',
+        	'menu order', 'menu report',
         	'report balance', 'report order', 
         	'profile edit personal'
         ]);
         $managerRole->givePermissionTo([
-        	'menu report', 'menu profile', 'menu order', 'menu payment',
+        	'menu report', 'menu order', 'menu payment', 'menu user',
         	'order user all',
         	'report balance', 'report order', 'report storage', 'report user all',
         	'profile edit personal'

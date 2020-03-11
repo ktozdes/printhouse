@@ -19,6 +19,7 @@ class CreateOrdersTable extends Migration
             $table->boolean('m')->nullable()->default(false);
             $table->boolean('y')->nullable()->default(false);
             $table->boolean('k')->nullable()->default(false);
+            $table->boolean('pantone')->nullable()->default(false);
             $table->boolean('urgent')->default(false);
             $table->boolean('deliver')->default(false);
             $table->string('address')->nullable();

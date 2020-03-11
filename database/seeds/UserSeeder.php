@@ -22,23 +22,34 @@ class UserSeeder extends Seeder
         		'fullname' => 'Sydykov Chyngyz', 
         		'company' => 'Developer', 
         		'phone1' => '0555-944-645', 
-        		'address' => 'туголбай ата 67 кв 114',
+        		'address' => 'Tуголбай ата 67 кв 114',
+                'balance' => '10000',
         		'email' => 'chyngyz6@gmail.com',
         		'password' => Hash::make('pass'),
         		'api_token' => Str::random(60),
-        		'created_at' => Carbon::now()
         	],
         	[
         		'name' => 'client', 
         		'fullname' => 'Clientov Client', 
         		'company' => 'Client', 
-        		'phone1' => '0555-944-655', 
+        		'phone1' => '0555-000-001', 
         		'address' => 'Bishkek ата 110 кв 22',
-        		'email' => 'client6@local.loc',
+                'balance' => '-50',
+        		'email' => 'client@local.loc',
         		'password' => Hash::make('pass'),
-        		'api_token' => Str::random(60),
-        		'created_at' => Carbon::now()
+        		'api_token' => Str::random(60)
         	],
+            [
+                'name' => 'client2', 
+                'fullname' => 'Clientov Client', 
+                'company' => 'Client', 
+                'phone1' => '0555-000-002', 
+                'address' => 'city Moscow, Mother Russia 2',
+                'balance' => '-5000',
+                'email' => 'client2@local.loc',
+                'password' => Hash::make('pass'),
+                'api_token' => Str::random(60)
+            ],
         ]);
     }
 }
