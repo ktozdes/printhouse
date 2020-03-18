@@ -16,7 +16,7 @@ class CreateStoragesTable extends Migration
         Schema::create('storages', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->integer('quantity')->default(0);
-            $table->float('price', 8, 2)->nullable();
+            $table->float('price', 10, 2)->nullable();
             $table->bigInteger('plate_id');
             $table->bigInteger('manager_id');
             $table->timestamps();

@@ -22,8 +22,8 @@ class TokenApi
         }
         $user = User::where('api_token', $token)->first();
         if (isset($user)) {
+            $user->pricing;
             $request->merge(['user' => $user ]);
-            //Auth::setUser($user);
             Auth::login($user);
             //add this
             $request->setUserResolver(function () use ($user) {

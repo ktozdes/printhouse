@@ -17,6 +17,8 @@ class CreateFilesTable extends Migration
             $table->bigIncrements('id');
             $table->string('src');
             $table->string('name')->nullable();
+            $table->string('old_name')->nullable();
+            $table->string('pages')->nullable();
             $table->string('size')->nullable();
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();

@@ -28,7 +28,7 @@ class PlateController extends Controller
     {
         $plates =  ($request->user->hasRole('super-admin')) 
             ? Plate::all()
-            : Plate::all('id', 'name', 'specification', 'producer', 'width', 'height', 'thickness', 'measurement_unit');
+            : Plate::all('id', 'name', 'price');
         
         return response()->json([
             'plates' => $plates

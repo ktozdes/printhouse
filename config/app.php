@@ -232,5 +232,6 @@ return [
         'View' => Illuminate\Support\Facades\View::class,
 
     ],
-
+    
+    'pdfinfo' => '/usr/local/bin/pdfinfo',
 ];

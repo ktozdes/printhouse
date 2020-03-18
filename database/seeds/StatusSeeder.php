@@ -15,7 +15,6 @@ class StatusSeeder extends Seeder
         DB::table('statuses')->insert([
         	['name' => 'Создан'],
         	['name' => 'В процессе'],
-        	['name' => 'Пластины готовы'],
         	['name' => 'Завершен'],
         ]);
     }

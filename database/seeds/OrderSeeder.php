@@ -11,6 +11,7 @@ class OrderSeeder extends Seeder
      */
     public function run()
     {
-        factory('App\Order', 50)->create();
+    	DB::table('orders')->truncate();
+        factory('App\Order', 100)->create();
     }
 }

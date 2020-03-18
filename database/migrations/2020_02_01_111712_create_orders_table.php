@@ -26,8 +26,9 @@ class CreateOrdersTable extends Migration
             $table->text('comment')->nullable();
             
             $table->integer('quantity')->default(0);
-            $table->float('price')->default(0);
+            $table->float('price', 10, 2)->default(0);
 
+            $table->unsignedBigInteger('payment_id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('plate_id');
             $table->unsignedBigInteger('status_id');

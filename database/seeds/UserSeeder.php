@@ -50,6 +50,17 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('pass'),
                 'api_token' => Str::random(60)
             ],
+            [
+                'name' => 'client3', 
+                'fullname' => 'Shalom Client2', 
+                'company' => 'Client2', 
+                'phone1' => '0555-000-003', 
+                'address' => 'city Moscow, New York',
+                'balance' => '5000',
+                'email' => 'client3@local.loc',
+                'password' => Hash::make('pass'),
+                'api_token' => Str::random(60)
+            ],
         ]);
     }
 }

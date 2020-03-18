@@ -6,9 +6,11 @@ use App\Order;
 use App\User;
 use App\Plate;
 use App\Status;
+use App\Payment;
 use Faker\Generator as Faker;
 
 $factory->define(Order::class, function (Faker $faker) {
+    $date = $faker->dateTimeBetween('-2 years');
     return [
         'c' => $faker->boolean($chanceOfGettingTrue = 50),
         'm' => $faker->boolean($chanceOfGettingTrue = 50),
@@ -23,5 +25,8 @@ $factory->define(Order::class, function (Faker $faker) {
         'user_id' =>User::all()->random()->id,
         'plate_id' =>Plate::all()->random()->id,
         'status_id' =>Status::all()->random()->id,
+        'payment_id' =>Payment::all()->random()->id,
+        'created_at' =>$date,
+        'updated_at' =>$date
     ];
 });

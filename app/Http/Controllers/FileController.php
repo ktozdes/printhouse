@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\File;
 use App\Order;
+use App\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 use Carbon\Carbon;
+use App\Events\PaymentWasCreated;
 
 class FileController extends Controller
 {
@@ -29,16 +31,6 @@ class FileController extends Controller
         //
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function create()
-    {
-        //
-    }
-
     public function upload(Request $request)
     {
         $file = $request->file('file');
@@ -47,15 +39,25 @@ class FileController extends Controller
             mkdir(public_path($this->uploadsPath), 0777);
         }
         $dt = Carbon::now();
-        $name  =$dt->format('Y-m-d-h-i') . '_'  . $request->user->name . '_'  . Str::random(5) . '.' . $file->getClientOriginalExtension();
+        $name  =$dt->format('Y-m-d-h-i') . '_'  . $request->user->name . '.' . $file->getClientOriginalExtension();
         $res = Storage::disk('public_path')->put( $this->uploadsPath . '/' . $name , file_get_contents($file) );
+        $fileMetaData = [];
         if ( $res ) {
+            //Storage::disk('public_path')->url($this->uploadsPath . '/' . $name);
+            $fullPath = Storage::disk('public_path')->getDriver()->getAdapter()->getPathPrefix() . $this->uploadsPath . '/' . $name ;
+            $fileMetaData = $this->getPDFInfo( $fullPath );
+            //print_r($fileMetaData);
+
             $filable = new File();
             $filable->name = $name;
-            $filable->src = $name;
-            $filable->size = $this->filesize_formatted($request->file('file')->getClientSize() );
+            $filable->old_name = $request->file('file')->getClientOriginalName();
+            $filable->src = Storage::disk('public_path')->url($this->uploadsPath . '/' . $name);
             $filable->filable_id = $request->user->id;
             $filable->filable_type = 'App\User';
+            $filable->pages = $fileMetaData['pages'];
+            $filable->width = $fileMetaData['width'];
+            $filable->height = $fileMetaData['height'];
+            $filable->size = $fileMetaData['size'];
 
             if (isset($request->orderID) && is_numeric($request->orderID)){
                 $order = Order::where([
@@ -75,6 +77,7 @@ class FileController extends Controller
                 'message' => 'PDF файл загружен.',
                 'file_id' => $filable->id,
                 'file' => $filable,
+                'meta_data' =>$fileMetaData,
             ]);
         }
         else {
@@ -135,7 +138,10 @@ class FileController extends Controller
      */
     public function destroy(Request $request, File $file)
     {
-        
+        // return response()->json([
+        //     'status' => 'success',
+        //     'message' => 'PDF файл удален.'
+        // ]);
         $request->validate([
             'id'=>'required|integer'
         ]);
@@ -145,6 +151,10 @@ class FileController extends Controller
                 ['id', '=', $request->orderID],
                 ['user_id', '=', $request->user->id],
             ])->first();
+
+            if (empty($order)) {
+                return response()->json(['status' => 'error', 'message' => 'Заказ не найден или вы не создавали этот заказ'], 400);
+            }
             
             $file = File::where([
                 ['filable_id', '=', $order->id],
@@ -180,10 +190,29 @@ class FileController extends Controller
         ]);
     }
 
-    private function filesize_formatted($size)
+    private function getPDFInfo($file)
     {
-        $units = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-        $power = $size > 0 ? floor(log($size, 1024)) : 0;
-        return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
+        $pdfinfoPath = config('app.pdfinfo');
+        $output = [];
+        $data = [];
+        exec("$pdfinfoPath $file", $output);
+        if (file_exists($file)){
+            foreach($output as $op) {
+                if(preg_match("/Pages:\s*(\d+)/i", $op, $matches) === 1)
+                {
+                    $data['pages'] = intval($matches[1]);
+                }
+                else if(preg_match("/File size:\s*(\d+)/i", $op, $matches) === 1)
+                {
+                    $data['size'] = intval($matches[1]) * 0.000001;
+                }
+                else if(strpos($op, "Page size:") === 0) {
+                    $dimensions = explode('x', preg_replace("/[^0-9x\.]/", "", explode('(', $op)[0]));
+                    $data['width'] = trim($dimensions[0]);
+                    $data['height'] = trim($dimensions[1]);
+                } 
+            }
+        }
+        return $data;
     }
 }

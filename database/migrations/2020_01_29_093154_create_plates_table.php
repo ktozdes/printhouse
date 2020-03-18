@@ -18,8 +18,8 @@ class CreatePlatesTable extends Migration
             $table->string('name');
             $table->string('specification')->nullable();
             $table->string('producer')->nullable();
+            $table->float('price', 10, 2)->default(0);
             $table->integer('quantity')->default(0);
-            $table->integer('price')->default(0);
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();
             $table->string('thickness')->nullable();

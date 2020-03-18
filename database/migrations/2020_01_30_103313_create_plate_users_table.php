@@ -17,7 +17,7 @@ class CreatePlateUsersTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('plate_id');
-            $table->float('price', 8, 2)->default(0);
+            $table->float('price', 10, 2)->default(0);
             $table->timestamps();
         });
     }
@@ -29,6 +29,6 @@ class CreatePlateUsersTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('plate_users');
+        Schema::dropIfExists('plate_user');
     }
 }

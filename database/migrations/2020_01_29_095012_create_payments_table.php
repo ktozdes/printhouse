@@ -16,10 +16,10 @@ class CreatePaymentsTable extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name')->default('payment');
-            $table->float('amount', 8, 2)->default(0);
-            $table->float('balance_before', 8, 2)->nullable();
-            $table->float('balance_after', 8, 2)->nullable();
-            $table->string('comment')->default();
+            $table->float('amount', 10, 2)->default(0);
+            $table->float('balance_before', 10, 2)->nullable();
+            $table->float('balance_after', 10, 2)->nullable();
+            $table->string('comment')->default('');
 
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('manager_id');

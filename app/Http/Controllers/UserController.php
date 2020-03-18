@@ -74,6 +74,7 @@ class UserController extends Controller
         $user = User::where([
             ['id', '=', $request->id],
         ])->first();
+        
         $user->pricing;
 
         if ($request->user->hasRole('client') && $user['id'] != $request->user->id) {
@@ -82,6 +83,14 @@ class UserController extends Controller
 
         if (empty($user)) {
             return response()->json(['status' => 'error', 'message' => 'Этого пользователя нельзя изменить или ее нет'], 400);
+        }
+
+        if ($request->user->hasRole('client')) {
+            return response()->json([
+                'status' => 'success',
+                'user' => $user,
+                'message' => 'Пользователь найден',
+            ]);
         }
 
         return response()->json([
@@ -105,6 +114,7 @@ class UserController extends Controller
             'change_user.company'=>'required',
             'change_user.phone1'=>'required',
         ]);
+        
         $tempUser = $request->change_user;
         if ( $request->user->hasRole('client')){
             if ($tempUser['id'] != $request->user->id) {
@@ -114,6 +124,7 @@ class UserController extends Controller
             unset($tempUser['rank']);
             unset($tempUser['trust']);
         }
+        unset($tempUser['pricing']);
         unset($tempUser['repeatPassword']);
         
         $phoneEmailCheckUser = DB::table('users')
@@ -132,15 +143,26 @@ class UserController extends Controller
 
         $user = User::find($tempUser['id']);
 
-        
         $passwordChanged = false;
         $user->update($tempUser);
         if (isset($tempUser['password']) && strlen($tempUser['password']) > 3) {
             $user->password = Hash::make($tempUser['password']);
             $user->api_token = Str::random(60);
-            $user->save();
             $passwordChanged = true;
         }
+
+        if ($request->user->can('profile edit additional') && is_array($request->pricing) && count($request->pricing) > 0) {
+            $savingData = [];
+            foreach ($request->pricing as $key => $pricing) {
+                $savingData[$pricing['id']] = ['price' => $pricing['price']];
+            }
+            $user->rank = $tempUser['rank'];
+            $user->trust = $tempUser['trust'];
+            $user->comment = $tempUser['comment'];
+            $user->plates()->sync($savingData);
+        }
+        
+        $user->save();
 
         return response()->json([
             'status' => 'success',

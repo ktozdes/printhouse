@@ -11,6 +11,7 @@ class StorageSeeder extends Seeder
      */
     public function run()
     {
-        //
+    	DB::table('storages')->truncate();
+        factory('App\Storage', 100)->create();
     }
 }

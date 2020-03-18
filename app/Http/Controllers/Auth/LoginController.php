@@ -47,13 +47,18 @@ class LoginController extends Controller
     }
 
     public function login(Request $request){
-        $user = User::where('name', $request->name)->first();
+        $user = User::where([
+            ['name', $request->name],
+        ])->first();
         $user->rollApiKey();
         if (isset($user) && Hash::check($request->password, $user->password)) {
+            if ($user->active != '1'){
+                return response()->json(['status' => 'error', 'message' => 'Этот пользователь не активен.'], 401);
+            }
             return response()->json(['status' => 'success', 'token' =>$user->api_token ]);
         }
         else{
-            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+            return response()->json(['status' => 'error', 'message' => 'Не правильный логин или пароль.'], 401);
         }
     }
 

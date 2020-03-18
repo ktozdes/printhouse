@@ -21,11 +21,12 @@ class CreateUsersTable extends Migration
             $table->string('phone1', 20)->unique()->nullable();
             $table->string('phone2', 20)->nullable();
             $table->string('address')->nullable();
-            $table->float('balance', 8, 2)->default(0);
+            $table->float('balance', 10, 2)->default(0);
             $table->smallInteger('rank')->default(1);
             $table->smallInteger('trust')->default(1);
             $table->text('comment')->nullable();
             $table->boolean('active')->default(1);
+            $table->boolean('refresh')->default(0);
             $table->string('email')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');

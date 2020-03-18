@@ -11,6 +11,7 @@ class PaymentSeeder extends Seeder
      */
     public function run()
     {
-        //
+    	DB::table('payments')->truncate();
+        factory('App\Payment', 100)->create();
     }
 }

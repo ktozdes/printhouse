@@ -21,7 +21,7 @@ class User extends Authenticatable
      * @var array
      */
     protected $guarded = [
-        'balance', 'rank', 'trust', 'comment', 'comment', 'api_token'
+        'balance', 'rank', 'trust', 'comment', 'api_token'
 
     ];
 
