@@ -11,6 +11,6 @@ class FileSeeder extends Seeder
      */
     public function run()
     {
-        //
+        DB::table('files')->truncate();
     }
 }

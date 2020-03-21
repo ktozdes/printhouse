@@ -27,6 +27,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $superAdminRole = Role::create(['name' => 'super-admin']);
 
         // create menu permissions
+        Permission::create(['name' => 'menu dashboard']);
         Permission::create(['name' => 'menu order']);
         Permission::create(['name' => 'menu report']);
         Permission::create(['name' => 'menu user']);
@@ -53,7 +54,7 @@ class RolesAndPermissionsSeeder extends Seeder
         	'profile edit personal'
         ]);
         $managerRole->givePermissionTo([
-        	'menu report', 'menu order', 'menu payment', 'menu user',
+        	'menu dashboard', 'menu order', 'menu report', 'menu payment', 'menu user',
         	'order user all',
         	'report balance', 'report order', 'report storage', 'report user all',
         	'profile edit personal'

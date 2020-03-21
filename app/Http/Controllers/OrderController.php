@@ -6,6 +6,7 @@ use App\Order;
 use App\File;
 use App\Plate;
 use App\Payment;
+use App\User;
 use Illuminate\Http\Request;
 
 use App\Events\PaymentWasCreated;
@@ -39,65 +40,6 @@ class OrderController extends Controller
     {
         //
     }
-
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'file_id'=>'required|integer',
-            'order.plateId'=>'required|integer'
-        ]);
-        $order = new Order($request->order);
-        $order->user_id = $request->user->id;
-        $order->status_id = 1;
-        $order->plate_id = $request->order['plateId'];
-        $order->quantity = $request->order['quantity'];
-
-        $order->price = $this->calculateOrderPrice([
-            'plate_id'=>$request->order['plateId'],
-            'quantity'=>$request->order['quantity'],
-            'c'=>$request->order['c'],
-            'm'=>$request->order['m'],
-            'y'=>$request->order['y'],
-            'k'=>$request->order['k'],
-            'pantone'=>$request->order['pantone'],
-        ], $request->user);
-
-        $payment = new Payment([
-            'amount'=> (-1) * $order->price,
-            'name'=>'order',
-            'balance_before'=>$request->user['balance'],
-            'balance_after'=>( $request->user['balance'] - $order->price),
-            'user_id'=>$request->user['id'],
-            'manager_id'=>$request->user['id'],
-        ]);
-        $payment->save();
-
-        event(new PaymentWasCreated($payment));
-
-        $order->payment_id = $payment->id;
-        $order->save();
-
-        $file = File::where([
-            ['id', '=', $request->file_id],
-        ])->first();
-        $file->filable_id = $order->id;
-        $file->filable_type = 'App\Order';
-        $file->save();
-        return response()->json([
-            'status' => 'success',
-            'order' => $order,
-            'file' => $file,
-            'response' => $request->order,
-            'message' => 'Заказ Создан',
-        ]);
-
-    }
     /**
      * Store a newly created resource in storage.
      *
@@ -107,9 +49,20 @@ class OrderController extends Controller
     public function list(Request $request)
     {
         if (!$request->user->hasRole('client')) {
-            $orders = Order::select(['orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'orders.address', 'orders.comment', 'status_id', 'status.name as status_name', 'orders.price as price', 'orders.quantity as quantity', 'user_id', 'user.name as user_name', 'file.old_name as file_name', 'plate_id'])
-            ->join('statuses as status', 'status.id', '=', 'orders.status_id')
+            $orders = Order::select([
+                'orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'orders.address', 'orders.comment', 
+                'status.id as status_id', 'status.name as status_name', 
+                'storage.id as storage_id', 'storage.quantity as quantity', 'storage.plate_id as plate_id',
+                'payment.amount as price', 'payment.id as payment_id',
+                'file.id as file_id', 'file.old_name as file_name', 'file.url as file_url', 'file.pages as pages',
+                'user.id as user_id', 'user.name as user_name',
+                'manager.id as manager_id', 'manager.name as manager_name',
+            ])
             ->join('users as user', 'user.id', '=', 'orders.user_id')
+            ->join('users as manager', 'manager.id', '=', 'orders.manager_id')
+            ->join('statuses as status', 'status.id', '=', 'orders.status_id')
+            ->join('storages as storage', 'storage.id', '=', 'orders.storage_id')
+            ->join('payments as payment', 'payment.id', '=', 'orders.payment_id')
             ->leftJoin('files as file', function($q) {
                 $q->on('file.filable_id', '=', 'orders.id');
                 $q->where('file.filable_type', '=', 'App\Order');
@@ -120,22 +73,87 @@ class OrderController extends Controller
             ->paginate(25);
         }
         else{
-            $orders = Order::select(['orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'address', 'comment', 'status_id', 'status.name as status_name', 'orders.price as price','orders.quantity as quantity', 'file.old_name as file_name', 'user_id', 'plate_id'])
+            $orders = Order::select([
+                'orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'orders.address', 'orders.comment', 
+                'status_id', 'status.name as status_name', 
+                'storage.id as storage_id', 'storage.quantity as quantity', 'storage.plate_id as plate_id',
+                'payment.amount as price', 'payment.id as payment_id',
+                'file.id as file_id', 'file.old_name as file_name', 'file.url as file_url', 'file.pages as pages',
+                'user.id as user_id', 'user.name as user_name',
+                'manager.id as manager_id', 'manager.name as manager_name',
+            ])
+            ->join('users as user', 'user.id', '=', 'orders.user_id')
+            ->join('users as manager', 'manager.id', '=', 'orders.manager_id')
             ->join('statuses as status', 'status.id', '=', 'orders.status_id')
+            ->join('storages as storage', 'storage.id', '=', 'orders.storage_id')
+            ->join('payments as payment', 'payment.id', '=', 'orders.payment_id')
             ->leftJoin('files as file', function($q) {
                 $q->on('file.filable_id', '=', 'orders.id');
                 $q->where('file.filable_type', '=', 'App\Order');
                 $q->orderBy('file.name', 'asc');
                 $q->groupBy('file.filable_id');
             })
-            ->where('user_id', $request->user->id)
+            ->where('user.id', $request->user->id)
             ->orderBy('id', 'desc')
             ->paginate(25);
         }
+
+
+        foreach($orders as $key => $order){
+            $orders[$key] = $this->normalizeItem($order);
+        }
+        
         return response()->json([
             'status' => 'success',
             'orders' => $orders,
             'message' => 'Список Заказов выбран.',
+        ]);
+
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'order.file.id'=>'required|integer',
+            'order.storage.plate_id'=>'required|integer'
+        ]);
+        $order = new Order($request->order);
+        $user = (isset($request->order['user']['id'])) ? User::find($request->order['user']['id']) : $request->user;
+        $order->user_id = $user->id;
+        $order->manager_id = $request->user->id;
+        $order->status_id = 1;
+        $order->storage_id = 100;
+
+        $order->save();
+
+        event(new PaymentWasCreated([
+            'name'  =>'order',
+            'order' => $order,
+            'plate_id' => $request->order['storage']['plate_id'],
+            'file_id' => $request->order['file']['id'],
+            'user'  => $user,
+            'manager'  => $request->user,
+        ]));
+
+        $file = File::where([
+            ['id', '=', $request->order['file']['id']],
+        ])->first();
+        $file->filable_id = $order->id;
+        $file->filable_type = 'App\Order';
+        $file->save();
+
+        return response()->json([
+            'status' => 'success',
+            'order' => $order,
+            'file' => $file,
+            'response' => $request->order,
+            'message' => 'Заказ Создан',
         ]);
 
     }
@@ -163,18 +181,51 @@ class OrderController extends Controller
             'id'=>'required|integer',
         ]);
         if ($request->user->hasRole('client')) {
-            $order = Order::where([
-                ['id', '=', $request->id],
+            $order = Order::select(['orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'address', 'orders.comment as comment', 'status_id', 'orders.user_id as user_id', 
+                'payment.amount as price', 'payment.id as payment_id', 
+                'file.pages as pages',  
+                'storage.plate_id as plate_id', 'storage.id as storage_id',
+            ])
+            ->join('storages as storage', 'storage.id', '=', 'orders.storage_id')
+            ->join('payments as payment', 'payment.id', '=', 'orders.payment_id')
+            ->leftJoin('files as file', function($q) {
+                $q->on('file.filable_id', '=', 'orders.id');
+                $q->where('file.filable_type', '=', 'App\Order');
+                $q->orderBy('file.name', 'asc');
+                $q->groupBy('file.filable_id');
+            })
+            ->where([
+                ['orders.id', '=', $request->id],
                 ['status_id', '=', 1],
-                ['user_id', '=', $request->user->id],
-            ])->get(['id', 'c', 'm', 'y', 'k', 'pantone', 'price', 'quantity', 'urgent', 'deliver', 'address', 'comment', 'status_id', 'user_id', 'plate_id'])->first();
-        }
-        else{
-            $order = Order::where([
-                ['id', '=', $request->id],
-            ])->get(['id', 'c', 'm', 'y', 'k', 'pantone', 'price', 'quantity', 'urgent', 'deliver', 'address', 'comment', 'status_id', 'user_id', 'plate_id'])->first();
+                ['orders.user_id', '=', $request->user->id],
+            ])->first();
         }
 
+        else{
+            $order = Order::select(['orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'address', 'orders.comment as comment', 'status_id', 'orders.user_id as user_id', 
+                'payment.amount as price', 'payment.id as payment_id', 
+                'file.pages as pages',  
+                'storage.plate_id as plate_id', 'storage.id as storage_id',
+            ])
+            ->join('storages as storage', 'storage.id', '=', 'orders.storage_id')
+            ->join('payments as payment', 'payment.id', '=', 'orders.payment_id')
+            ->leftJoin('files as file', function($q) {
+                $q->on('file.filable_id', '=', 'orders.id');
+                $q->where('file.filable_type', '=', 'App\Order');
+                $q->orderBy('file.name', 'asc');
+                $q->groupBy('file.filable_id');
+            })
+            ->where([
+                ['orders.id', '=', $request->id],
+            ])->first();
+        }
+
+        //print_r($order);
+
+        $order = $this->normalizeItem($order);
+        
+        //print_r($order);
+        //die;
         
 
         if (empty($order)) {
@@ -185,7 +236,6 @@ class OrderController extends Controller
             ['filable_id', '=', $order->id],
             ['filable_type', '=', 'App\Order'],
         ])->first();
-
         return response()->json([
             'status' => 'success',
             'order' => $order,
@@ -206,8 +256,8 @@ class OrderController extends Controller
         
         $request->validate([
             'order.id'=>'required|integer',
-            'file_id'=>'required|integer',
-            'order.plateId'=>'required|integer'
+            'order.file.id'=>'required|integer',
+            'order.storage.plate_id'=>'required|integer'
         ]);
 
         $order = Order::find($request->order['id']);
@@ -216,42 +266,51 @@ class OrderController extends Controller
             $order->user_id == $request->user->id && $order->status_id != 1))){
             return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя изменить'], 403);
         }
-        $previousOrderPrice = $order->price;
-        $order->plate_id = $request->order['plateId'];
+        $user = (isset($request->order['user']['id'])) ? User::find($request->order['user']['id']) : $request->user;
+        $order->status_id = ($request->user->hasRole('client')) ? 1 : $request->order['status']['id'];
         $order->update($request->order);
-        $order->status_id = ($request->user->hasRole('client')) ? 1 : $request->status_id;
-
-        $order->price = $this->calculateOrderPrice([
-            'plate_id'=>$request->order['plateId'],
-            'quantity'=>$request->order['quantity'],
-            'c'=>$request->order['c'],
-            'm'=>$request->order['m'],
-            'y'=>$request->order['y'],
-            'k'=>$request->order['k'],
-            'pantone'=>$request->order['pantone'],
-        ], $request->user);
-
-        $payment = Payment::find($order->payment_id);
-        $payment->amount = (-1) * $order->price;
-        $payment->name = 'order update';
-        $payment->balance_before = $request->user['balance'] + $previousOrderPrice;
-        $payment->balance_after = ($request->user['balance'] + $previousOrderPrice) - $order->price;
-        $payment->manager_id = $request->user['id'];
-
-        $payment->save();
-        
-        //user balance correct calculation
-        $payment->amount = $previousOrderPrice - $order->price;
-
-        event(new PaymentWasCreated($payment));
-
         $order->save();
+
+        event(new PaymentWasCreated([
+            'name'  =>'update order',
+            'order' => $order,
+            'payment_id' => $order->payment_id,
+            'plate_id' => $request->order['storage']['plate_id'],
+            'file_id' => $request->order['file']['id'],
+            'user'  => $user,
+            'manager'  => $request->user,
+        ]));
 
         return response()->json([
             'status' => 'success',
             'order' => $order,
-            'payment' => $payment,
+            //'payment' => $payment,
             'message' => 'Заказ изменен',
+        ]);
+
+        
+    }/**
+     * changes status the specified resource in storage.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Order  $order
+     * @return \Illuminate\Http\Response
+     */
+    public function changeStatus(Request $request)
+    {
+        
+        $request->validate([
+            'order_id'=>'required|integer',
+            'status_id'=>'required|integer',
+        ]);
+        $order = Order::find($request->order_id);
+        $order->status_id = $request->status_id;
+        $order->save();
+
+        return response()->json([
+            'status' => 'success',
+            'status_id' => $order->status_id,
+            'message' => 'Статус заказа изменен',
         ]);
 
         
@@ -270,11 +329,18 @@ class OrderController extends Controller
             'id'=>'required|integer',
         ]);
 
-        $order = Order::where([
-            ['id', '=', $request->id],
-            ['status_id', '=', 1],
-            ['user_id', '=', $request->user->id],
-        ])->first();
+        if ( $request->user->hasRole('client') ) {
+            $order = Order::where([
+                ['id', '=', $request->id],
+                ['status_id', '=', 1],
+                ['user_id', '=', $request->user->id],
+            ])->first();
+        }
+        else{
+            $order = Order::where([
+                ['id', '=', $request->id]
+            ])->first();
+        }
         
         $file = File::where([
             ['filable_id', '=', $request->id],
@@ -285,19 +351,17 @@ class OrderController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Этот заказ нельзя удалить или его нет'], 403);
         }
 
-        if (empty($file)) {
-            return response()->json(['status' => 'error', 'message' => 'Файл не найден'], 400);
-        }
- 
-        $file_path = public_path($this->uploadsPath) . '/' . $file->name;
- 
-        if (file_exists($file_path)) {
-            unlink($file_path);
-        }
- 
         if (!empty($file)) {
-            $file->delete();
+            $file_path = public_path($this->uploadsPath) . '/' . $file->name;
+            if (file_exists($file_path)) {
+                unlink($file_path);
+            }
+     
+            if (!empty($file)) {
+                $file->delete();
+            }
         }
+        
 
         if (!empty($order)) {
             $order->delete();
@@ -309,21 +373,45 @@ class OrderController extends Controller
         ]);
     }
 
-    private function calculateOrderPrice($args, $user) {
-        $plate = Plate::find($args['plate_id']);
-        $price = $plate->price;
-        foreach ($user->pricing as $key => $platePrice) {
-            if ($platePrice['plate_id'] == $args['plate_id']) {
-                $price = $platePrice['price'];
-            }
-        }
-        $selectedColors = count(array_filter([
-            $args['c'],
-            $args['m'],
-            $args['y'],
-            $args['k'],
-            $args['pantone'],
-        ]));
-        return ($price * $args['quantity'] * $selectedColors);
+    private function normalizeItem( $item ){
+        $item['status'] = [
+            'id' => $item['status_id'], 
+            'name' => $item['status_name'],
+        ];
+        unset($item['status_name']);
+
+        $item['payment'] = [
+            'id' => $item['payment_id'],
+            'price' => $item['price'],
+        ];
+        unset($item['payment_id'], $item['price']);
+
+        $item['storage'] = [
+            'id' => $item['storage_id'], 
+            'quantity' => $item['quantity'],
+            'plate_id' => $item['plate_id'],
+        ];
+        unset($item['storage_id'], $item['quantity'], $item['plate_id']);
+        
+        $item['file'] = [
+            'id' => $item['file_id'], 
+            'name' => $item['file_name'],
+            'url' => $item['file_url'],
+            'pages' => $item['pages'],
+        ];
+        unset($item['file_id'], $item['file_name'], $item['file_url'], $item['pages']);
+
+        $item['user'] = [
+            'id' => $item['user_id'], 
+            'name' => $item['user_name'],
+        ];
+        unset($item['user_name']);
+
+        $item['manager'] = [
+            'id' => $item['manager_id'], 
+            'name' => $item['manager_name'],
+        ];
+        unset($item['manager_id'], $item['manager_name']);
+        return $item;
     }
 }

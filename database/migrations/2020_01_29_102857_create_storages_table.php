@@ -15,10 +15,15 @@ class CreateStoragesTable extends Migration
     {
         Schema::create('storages', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('name')->default('order');
             $table->integer('quantity')->default(0);
+            $table->integer('quantity_before')->nullable();
+            $table->integer('quantity_after')->nullable();
             $table->float('price', 10, 2)->nullable();
-            $table->bigInteger('plate_id');
-            $table->bigInteger('manager_id');
+            
+            $table->bigInteger('plate_id')->nullable();
+            $table->bigInteger('user_id')->nullable();
+            $table->bigInteger('manager_id')->nullable();
             $table->timestamps();
         });
     }

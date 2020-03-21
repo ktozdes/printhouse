@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Payment;
+use App\User;
 use Illuminate\Http\Request;
 use App\Events\PaymentWasCreated;
 
@@ -41,16 +42,16 @@ class PaymentController extends Controller
             'payment.user_id'=>'required:integer'
         ]);
 
-        $payment = new Payment($request->payment);
-        $payment->manager_id = $request->user->id;
-        $payment->save();
-
-        event(new PaymentWasCreated($payment));
+        event(new PaymentWasCreated([
+            'name'      => 'payment',
+            'amount'    => $request->payment['amount'],
+            'user'      => User::find($request->payment['user_id']),
+            'manager'   => $request->user,
+        ]));
         
         return response()->json([
             'status' => 'success',
-            'payment' => $payment,
-            'message' => 'Оплата Создана',
+            'message' => 'Оплата Принята',
         ]);
     }
 

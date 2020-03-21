@@ -21,8 +21,8 @@ class CreatePaymentsTable extends Migration
             $table->float('balance_after', 10, 2)->nullable();
             $table->string('comment')->default('');
 
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('manager_id');
+            $table->bigInteger('user_id');
+            $table->bigInteger('manager_id');
             $table->timestamps();
         });
     }

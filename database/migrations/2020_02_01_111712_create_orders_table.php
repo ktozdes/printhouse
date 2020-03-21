@@ -24,14 +24,12 @@ class CreateOrdersTable extends Migration
             $table->boolean('deliver')->default(false);
             $table->string('address')->nullable();
             $table->text('comment')->nullable();
-            
-            $table->integer('quantity')->default(0);
-            $table->float('price', 10, 2)->default(0);
 
-            $table->unsignedBigInteger('payment_id');
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('plate_id');
-            $table->unsignedBigInteger('status_id');
+            $table->unsignedBigInteger('payment_id')->nullable();
+            $table->unsignedBigInteger('storage_id')->nullable();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('manager_id')->nullable();
+            $table->unsignedBigInteger('status_id')->nullable();
             
             $table->timestamps();
         });

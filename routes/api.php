@@ -40,6 +40,7 @@ Route::get('/order/list', 'OrderController@list')->middleware(['cors', 'token'])
 Route::post('/order/store', 'OrderController@store')->middleware(['cors', 'token']);
 Route::get('/order/edit', 'OrderController@edit')->middleware(['cors', 'token']);
 Route::post('/order/update', 'OrderController@update')->middleware(['cors', 'token']);
+Route::post('/order/change_status', 'OrderController@changeStatus')->middleware(['cors', 'token', 'permission:order user all']);
 Route::post('/order/destroy', 'OrderController@destroy')->middleware(['cors', 'token']);
 
 

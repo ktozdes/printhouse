@@ -51,7 +51,7 @@ class FileController extends Controller
             $filable = new File();
             $filable->name = $name;
             $filable->old_name = $request->file('file')->getClientOriginalName();
-            $filable->src = Storage::disk('public_path')->url($this->uploadsPath . '/' . $name);
+            $filable->url = Storage::disk('public_path')->url($this->uploadsPath . '/' . $name);
             $filable->filable_id = $request->user->id;
             $filable->filable_type = 'App\User';
             $filable->pages = $fileMetaData['pages'];
@@ -77,7 +77,6 @@ class FileController extends Controller
                 'message' => 'PDF файл загружен.',
                 'file_id' => $filable->id,
                 'file' => $filable,
-                'meta_data' =>$fileMetaData,
             ]);
         }
         else {

@@ -19,10 +19,10 @@ class PaymentWasCreated
      *
      * @return void
      */
-    public $payment;
-    public function __construct($payment)
+    public $data;
+    public function __construct($data)
     {
-        $this->payment = $payment;
+        $this->data = $data;
     }
 
     /**

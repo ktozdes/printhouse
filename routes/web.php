@@ -10,8 +10,11 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
+	echo url('/')."<br/>";
+	echo Storage::disk('public_path')->url('hello/');
 	try {
 	    DB::connection()->getPdo();
 	} catch (\Exception $e) {
