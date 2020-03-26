@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Seeder;
+use App\Order;
 
 class StorageSeeder extends Seeder
 {
@@ -12,6 +13,9 @@ class StorageSeeder extends Seeder
     public function run()
     {
     	DB::table('storages')->truncate();
-        factory('App\Storage', 100)->create();
+        factory('App\Storage', 20)->create(['name' => 'storage']);
+        Order::all()->each(function ($order){
+            factory('App\Storage')->create(['name' => 'order', 'order_id'=> $order->id]); 
+        });
     }
 }

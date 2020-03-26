@@ -19,10 +19,10 @@ class PlateQuantityChanged
      *
      * @return void
      */
-    public $storage;
-    public function __construct($storage)
+    public $data;
+    public function __construct($data)
     {
-        $this->storage = $storage;
+        $this->data = $data;
     }
 
     /**

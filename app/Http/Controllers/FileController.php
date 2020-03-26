@@ -60,14 +60,8 @@ class FileController extends Controller
             $filable->size = $fileMetaData['size'];
 
             if (isset($request->orderID) && is_numeric($request->orderID)){
-                $order = Order::where([
-                    ['id', '=', $request->orderID],
-                    ['user_id', '=', $request->user->id],
-                ])->first();
-                if (!empty($order)) {
-                    $filable->filable_id = $order->id;
-                    $filable->filable_type = 'App\Order';
-                }
+                $filable->filable_id = $request->orderID;
+                $filable->filable_type = 'App\Order';
                 
             }
             $filable->save();

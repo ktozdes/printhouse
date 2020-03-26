@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Payment;
 use App\Order;
 use App\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ReportController extends Controller
 {
@@ -59,7 +60,7 @@ class ReportController extends Controller
 
         return response()->json([
             'status' => 'success',
-            //'ddd' => $request->all(),
+            'ddd' => $searchFilter,
             'payments' => $payments,
         ]);
     }
@@ -72,10 +73,10 @@ class ReportController extends Controller
         $dir = 'desc';
         
         if ($request->user->hasRole('client')) {
-            $searchFilter[] = ['user_id', '=', $request->user->id];
+            $searchFilter[] = ['orders.user_id', '=', $request->user->id];
         }
         else if (isset($request->user_id) && is_numeric($request->user_id)) {
-            $searchFilter[] = ['user_id', '=', $request->user_id];
+            $searchFilter[] = ['orders.user_id', '=', $request->user_id];
         }
         if (isset( $request->start_time )) {
             $searchFilter[] = ['orders.created_at', '>=', $request->start_time];
@@ -97,17 +98,30 @@ class ReportController extends Controller
             $sortBy = 'orders.price';
             $dir = 'asc';
         }
-        $orders = Order::select(['c', 'm', 'y', 'k', 'pantone', 'orders.price as price', 'orders.quantity as quantity', 'plate.name as plate_name', 'orders.comment as comment', 'plate_id', 'status_id', 'status.name as status_name', 'user_id', 'user.name as user_name', 'orders.created_at as created_at'])
+        $orders = Order::select(['c', 'm', 'y', 'k', 'pantone', 'orders.user_id as user_id', 'orders.comment as comment', 'status_id', 'status.name as status_name',
+            'payment.amount as price', 'storage.quantity as quantity', 'storage.plate_id', 
+            'plate.name as plate_name', 'user.name as user_name', 'orders.created_at as created_at'])
             ->join('statuses as status', 'status.id', '=', 'orders.status_id')
             ->join('users as user', 'user.id', '=', 'orders.user_id')
-            ->join('plates as plate', 'plate.id', '=', 'orders.plate_id')
+            ->leftJoinSub(
+                DB::table('storages')
+                ->select(DB::raw("order_id, max(id) as id, count(id) as storage_number, AVG(plate_id) as plate_id, sum(quantity) as quantity"))
+                ->groupBy('order_id'), 
+                'storage', function($join) {
+                $join->on('storage.order_id', '=', 'orders.id');
+            })
+            ->leftJoin('plates as plate', function($plateQuery) {
+                $plateQuery->on('plate.id', '=', 'storage.plate_id');
+            })
+            ->leftJoin('payments as payment', function($plateQuery) {
+                $plateQuery->on('payment.id', '=', 'orders.payment_id');
+            })
             ->where( $searchFilter )
             ->orderBy($sortBy, $dir)
             ->paginate(25);
 
         return response()->json([
             'status' => 'success',
-            //'ddd' => $request->all(),
             'orders' => $orders,
         ]);
     }
@@ -158,7 +172,7 @@ class ReportController extends Controller
             $sortBy = 'storages.price';
             $dir = 'asc';
         }
-        $storages = Storage::select(['storages.quantity', 'storages.price', 'storages.plate_id', 'storages.manager_id', 'plates.name as plate_name', 'users.name as manager_name', 'storages.created_at as created_at'])
+        $storages = Storage::select(['storages.name', 'storages.quantity', 'storages.price', DB::raw('storages.quantity * storages.price as summa'), 'storages.plate_id', 'storages.manager_id', 'plates.name as plate_name', 'users.name as manager_name', 'storages.created_at as created_at'])
             ->join('users', 'users.id', '=', 'storages.manager_id')
             ->join('plates', 'plates.id', '=', 'storages.plate_id')
             ->where( $searchFilter )

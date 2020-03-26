@@ -63,19 +63,15 @@ class PlateController extends Controller
         $plate->save();
 
         if (isset($request->storage['quantity']) && $request->storage['quantity'] > 0) {
-            $storage = new Storage([
+            $storage = Storage::create([
+                'name' => 'storage',
                 'price' =>$request->storage['price'],
                 'quantity' =>$request->storage['quantity'],
+                'global_quantity_before' =>0,
+                'global_quantity_after' =>$request->storage['quantity'],
                 'manager_id' =>$request->user->id,
                 'plate_id' =>$plate->id,
             ]);
-            $storage->save();
-            event(new PlateQuantityChanged([
-                'price' =>$request->storage['price'],
-                'quantity' =>$request->storage['quantity'],
-                'manager_id' =>$request->user->id,
-                'plate_id' =>$plate->id,
-            ]));
         }
         
         return response()->json([
@@ -142,19 +138,16 @@ class PlateController extends Controller
         $plate->update($request->plate);
 
         if (isset($request->storage['quantity']) && $request->storage['quantity'] > 0) {
-            $storage = new Storage([
+            $storage = Storage::create([
+                'name' => 'storage',
                 'price' =>$request->storage['price'],
                 'quantity' =>$request->storage['quantity'],
+                'global_quantity_before' => $plate->quantity,
+                'global_quantity_after'  => $plate->quantity + $request->storage['quantity'],
                 'manager_id' =>$request->user->id,
                 'plate_id' =>$plate->id,
             ]);
-            $storage->save();
-            event(new PlateQuantityChanged([
-                'price' =>$request->storage['price'],
-                'quantity' =>$request->storage['quantity'],
-                'manager_id' =>$request->user->id,
-                'plate_id' =>$plate->id,
-            ]));
+            $plate->increment('quantity', $request->storage['quantity']);
         }
 
         return response()->json([

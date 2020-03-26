@@ -28,6 +28,17 @@ class UserSeeder extends Seeder
         		'password' => Hash::make('pass'),
         		'api_token' => Str::random(60),
         	],
+            [
+                'name' => 'manager', 
+                'fullname' => 'Managerov Manager', 
+                'company' => 'Developer', 
+                'phone1' => '0555-200-000', 
+                'address' => 'Tуголбай ата 111',
+                'balance' => '5000',
+                'email' => 'manager@local.loc',
+                'password' => Hash::make('pass'),
+                'api_token' => Str::random(60),
+            ],
         	[
         		'name' => 'client', 
         		'fullname' => 'Clientov Client', 

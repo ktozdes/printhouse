@@ -12,6 +12,9 @@ class OrderSeeder extends Seeder
     public function run()
     {
     	DB::table('orders')->truncate();
-        factory('App\Order', 100)->create();
+        for ($i = 0; $i < 100 ;$i ++) {
+            factory('App\Order')->create(['comment'=> $i]);
+        }
+        
     }
 }

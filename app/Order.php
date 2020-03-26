@@ -24,7 +24,7 @@ class Order extends Model
 
     public function storage()
     {
-        return $this->belongsTo('App\Storage', 'storage_id');
+        return $this->hasMany('App\Storage');
     }
 
     public function payment()
@@ -39,5 +39,9 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo('App\User', 'user_id');
+    }
+    public function pdf()
+    {
+        return $this->morphOne('App\File', 'filable');
     }
 }

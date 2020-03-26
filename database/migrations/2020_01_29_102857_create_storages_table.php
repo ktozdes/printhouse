@@ -17,10 +17,14 @@ class CreateStoragesTable extends Migration
             $table->bigIncrements('id');
             $table->string('name')->default('order');
             $table->integer('quantity')->default(0);
-            $table->integer('quantity_before')->nullable();
-            $table->integer('quantity_after')->nullable();
+            $table->integer('global_quantity_before')->nullable();
+            $table->integer('global_quantity_after')->nullable();
+            $table->integer('local_quantity_before')->nullable();
+            $table->integer('local_quantity_after')->nullable();
             $table->float('price', 10, 2)->nullable();
-            
+
+            $table->bigInteger('used_storage_id')->nullable();
+            $table->bigInteger('order_id')->nullable();
             $table->bigInteger('plate_id')->nullable();
             $table->bigInteger('user_id')->nullable();
             $table->bigInteger('manager_id')->nullable();
