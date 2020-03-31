@@ -52,9 +52,43 @@ class OrderController extends Controller
      */
     public function list(Request $request)
     {
+        $searchFilter = [];
+        $sortBy = 'orders.created_at';
+        $dir = 'desc';
+        
+        if ($request->user->hasRole('client')) {
+            $searchFilter[] = ['orders.user_id', '=', $request->user->id];
+        }
+        else if (isset($request->user_id) && is_numeric($request->user_id)) {
+            $searchFilter[] = ['orders.user_id', '=', $request->user_id];
+        }
+        if (isset( $request->start_time ) && $request->start_time != '') {
+            $searchFilter[] = ['orders.created_at', '>=', $request->start_time];
+        }
+        if (isset( $request->end_time) && $request->end_time != '') {
+            $searchFilter[] = ['orders.created_at', '<=', $request->end_time . ' 23:59:59'];
+        }
+        if (isset( $request->status_id ) && $request->status_id != 'all') {
+            $searchFilter[] = ['orders.status_id', '=',  $request->status_id];
+        }
+        if (isset( $request->plate_id ) && $request->plate_id != 'all') {
+            $searchFilter[] = ['storage.plate_id', '=',  $request->plate_id];
+        }
+
+        if($request->sort_by == 'date_asc') {
+            $dir = 'asc';
+        }
+        else if( $request->sort_by == 'plate_quantity_desc') {
+            $sortBy = 'storage.quantity';
+        }
+        else if( $request->sort_by == 'plate_quantity_asc') {
+            $sortBy = 'storage.quantity';
+            $dir = 'asc';
+        }
+
         if (!$request->user->hasRole('client')) {
             $orders = Order::select([
-                'orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'orders.address', 'orders.comment', 
+                'orders.id as id', 'c', 'm', 'y', 'k', 'pantone', 'urgent', 'deliver', 'orders.created_at','orders.address', 'orders.comment', 
                 'status.id as status_id', 'status.name as status_name', 
                 'file.id as file_id', 'file.old_name as file_name', 'file.url as file_url', 'file.pages as pages',
                 'user.id as user_id', 'user.name as user_name', 
@@ -86,7 +120,8 @@ class OrderController extends Controller
                 $q->where('file.filable_type', '=', 'App\Order');
                 $q->groupBy('file.filable_id');
             })
-            ->orderBy('orders.id', 'desc')
+            ->where( $searchFilter )
+            ->orderBy($sortBy, $dir)
             ->paginate(25);
         }
         else{

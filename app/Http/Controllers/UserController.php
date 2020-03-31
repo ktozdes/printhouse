@@ -41,8 +41,49 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'new_user.name'     =>'required|unique:users,name',
+            'new_user.email'    => 'required|unique:users,email',
+            'new_user.phone1'   => 'required|unique:users,phone1',
+            'new_user.company'  => 'required',
+            'new_user.password' => 'required'
+        ],
+        [
+            'new_user.name.unique' => 'Этот логин занят',
+            'new_user.email.unique' => 'Эта почта занята',
+            'new_user.phone1.unique' => 'Этот номер телефона занят',
+            'new_user.name.required' => 'Логин объязателен',
+            'new_user.email.required' => 'Почта объязателна',
+            'new_user.phone1.required' => 'Номер телефона объязателен',
+        ]);
 
+        $tempUser = $request->new_user;
+
+        unset($tempUser['repeatPassword']);
+
+        $user = User::firstOrNew($tempUser);
+        $user->password = Hash::make($tempUser['password']);
+        $user->api_token = Str::random(60);
+        $user->assignRole('client');
+        $user->save();
+
+        if ($request->user->can('profile edit additional') && is_array($request->pricing) && count($request->pricing) > 0) {
+            $savingData = [];
+            foreach ($request->pricing as $key => $pricing) {
+                $savingData[$pricing['id']] = ['price' => $pricing['price']];
+            }
+            $user->plates()->sync($savingData);
+        }
+        
+        if ($user) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Пользователь создан'
+            ]);
+        }
+        else {
+            return response()->json(['status' => 'error', 'message' => 'Unauthenticated.'], 401);
+        }
     }
 
     /**
