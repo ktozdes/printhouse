@@ -28,7 +28,7 @@ $factory->define(Payment::class, function (Faker $faker, $params) {
         $user->save();
     }
     else {
-        $order = Order::find($params['manager_id']);
+        $order = Order::find($params['comment']);
         $storage = Storage::where('order_id' , $order->id)->first();
         $user = User::find($order->user_id);
         $selectedColors = count(array_filter([
@@ -39,7 +39,7 @@ $factory->define(Payment::class, function (Faker $faker, $params) {
             $order->pantone,
         ]));
         $amount = (-1) * $order->pdf->pages * $selectedColors * $storage->price;
-        unset($params['manager_id']);
+        unset($params['comment']);
         $payment = [
             'amount' => $amount,
             'name' => 'order',

@@ -31,6 +31,8 @@ Route::post('/plate/update', 'PlateController@update')->middleware(['cors', 'tok
 Route::post('/plate/store', 'PlateController@store')->middleware(['cors', 'token', 'role:super-admin']);
 Route::post('/plate/destroy', 'PlateController@destroy')->middleware(['cors', 'token', 'role:super-admin']);
 
+Route::post('/storage/add_defect', 'StorageController@addDefect')->middleware(['cors', 'token', 'permission:menu defect']);
+
 
 Route::post('/payment/store', 'PaymentController@store')->middleware(['cors', 'token', 'permission:menu payment']);
 

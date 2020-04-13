@@ -33,25 +33,35 @@ class UpdatePlateQuantity
      */
     public function handle(PlateQuantityChanged $event)
     {
-        $pricing = DB::table('orders')
-        ->select(DB::raw('orders.id, orders.user_id as user_id, storage.storage_id, storage.plate_id, plate.quantity as plate_quantity, plate.price as plate_price, plate_user.price as user_price'))
-        ->leftJoinSub(
-            DB::table('storages')
-            ->select(DB::raw("id as storage_id, order_id, plate_id as plate_id"))
+        if (isset($event->data['order_id'])) {
+            $pricing = DB::table('orders')
+            ->select(DB::raw('orders.id, orders.user_id as user_id, storage.storage_id, storage.plate_id, plate.quantity as plate_quantity, plate.price as plate_price, plate_user.price as user_price'))
+            ->leftJoinSub(
+                DB::table('storages')
+                ->select(DB::raw("id as storage_id, order_id, plate_id as plate_id"))
+                ->where('order_id', $event->data['order_id'])
+                ->offset(0)->take(1),
+                'storage', function($join) {
+                $join->on('storage.order_id', '=', 'orders.id');
+            })
+            ->leftJoin('plates as plate', function($plateQuery) {
+                $plateQuery->on('plate.id', '=', 'storage.plate_id');
+            })
+            ->leftJoin('plate_user', function($plateUserQuery) {
+                $plateUserQuery->on('plate_user.plate_id', '=', 'storage.plate_id');
+                $plateUserQuery->on('plate_user.user_id', '=', 'orders.user_id');
+            })
             ->where('order_id', $event->data['order_id'])
-            ->offset(0)->take(1),
-            'storage', function($join) {
-            $join->on('storage.order_id', '=', 'orders.id');
-        })
-        ->leftJoin('plates as plate', function($plateQuery) {
-            $plateQuery->on('plate.id', '=', 'storage.plate_id');
-        })
-        ->leftJoin('plate_user', function($plateUserQuery) {
-            $plateUserQuery->on('plate_user.plate_id', '=', 'storage.plate_id');
-            $plateUserQuery->on('plate_user.user_id', '=', 'orders.user_id');
-        })
-        ->where('order_id', $event->data['order_id'])
-        ->first();
+            ->first();
+        }
+        else if (isset($event->data['plate_id'])) {
+            $pricing = new \stdClass();
+            $pricing->storage_id = null;
+            $pricing->plate_id = $event->data['plate_id'];
+            $pricing->user_id = $event->data['manager_id'];
+            $pricing->user_price = 'null';
+            $pricing->plate_price = Plate::find($event->data['plate_id'])->price;
+        }
 
         $inputStorages = DB::table('storages as inp')
         ->select(DB::raw("inp.id as id, inp.plate_id, inp.quantity, inp.updated_at, min_value"))
@@ -76,16 +86,20 @@ class UpdatePlateQuantity
         $update = true;
 
         $quantity = $event->data['quantity'];
+        $name = isset($event->data['name']) ? $event->data['name'] : 'order';
+        $comment = isset($event->data['comment']) ? $event->data['comment'] : null;
         $orderPrice = is_numeric($pricing->user_price) ? $pricing->user_price : $pricing->plate_price;
 
         foreach ($inputStorages as $key => $inputStorage) {
             if ($quantity > 0) {
-                if (is_numeric($inputStorage->min_value)){
+                if (is_numeric($inputStorage->min_value)) {
                     if ($inputStorage->min_value >= $quantity) {
                         $this->updateInsertStorage([
                             'quantity' => $quantity,
+                            'name' => $name,
                             'storage_id' => ($update) ? $pricing->storage_id : null,
                             'price' => $orderPrice,
+                            'comment' => $comment,
                             'local_quantity' => $inputStorage->min_value,
                             'used_storage_id' => $inputStorage->id,
                             'order_id' => $event->data['order_id'],
@@ -99,8 +113,10 @@ class UpdatePlateQuantity
                     else if ($inputStorage->min_value < $quantity) {
                         $this->updateInsertStorage([
                             'quantity' => $inputStorage->min_value,
+                            'name' => $name,
                             'storage_id' => ($update) ? $pricing->storage_id : null,
                             'price' => $orderPrice,
+                            'comment' => $comment,
                             'local_quantity' => $inputStorage->min_value,
                             'used_storage_id' => $inputStorage->id,
                             'order_id' => $event->data['order_id'],
@@ -116,8 +132,10 @@ class UpdatePlateQuantity
                     if ($inputStorage->quantity >= $quantity) {
                         $this->updateInsertStorage([
                             'quantity' => $quantity,
+                            'name' => $name,
                             'storage_id' => ($update) ? $pricing->storage_id : null,
                             'price' => $orderPrice,
+                            'comment' => $comment,
                             'local_quantity' => $inputStorage->quantity,
                             'used_storage_id' => $inputStorage->id,
                             'order_id' => $event->data['order_id'],
@@ -131,8 +149,10 @@ class UpdatePlateQuantity
                     else if ($inputStorage->quantity < $quantity) {
                         $this->updateInsertStorage([
                             'quantity' => $inputStorage->quantity,
+                            'name' => $name,
                             'storage_id' => ($update) ? $pricing->storage_id : null,
                             'price' => $orderPrice,
+                            'comment' => $comment,
                             'local_quantity' => $inputStorage->quantity,
                             'used_storage_id' => $inputStorage->id,
                             'order_id' => $event->data['order_id'],
@@ -146,13 +166,15 @@ class UpdatePlateQuantity
                 }
             }
         }
-        event(new PaymentWasCreated([
-            'name'      => 'order',
-            'order_id'  => $event->data['order_id'],
-            'amount'    => ((-1) * $orderPrice * $event->data['quantity']),
-            'user'      => User::find($pricing->user_id),
-            'manager'   => User::find($event->data['manager_id']),
-        ]));
+        if (isset($event->data['order_id'])) {
+            event(new PaymentWasCreated([
+                'name'      => 'order',
+                'order_id'  => $event->data['order_id'],
+                'amount'    => ((-1) * $orderPrice * $event->data['quantity']),
+                'user'      => User::find($pricing->user_id),
+                'manager'   => User::find($event->data['manager_id']),
+            ]));
+        }
     }
 
     private function updateInsertStorage($storage) {
@@ -162,7 +184,9 @@ class UpdatePlateQuantity
             ['id' => $storage['storage_id']],
             [
                 'quantity'         => $storage['quantity'],
+                'name'             => $storage['name'],
                 'price'            => $storage['price'],
+                'comment'          => $storage['comment'],
                 'order_id'         => $storage['order_id'],
                 'plate_id'         => $storage['plate_id'],
                 'user_id'          => $storage['user_id'],

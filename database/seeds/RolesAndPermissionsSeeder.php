@@ -29,6 +29,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // create menu permissions
         Permission::create(['name' => 'menu dashboard']);
         Permission::create(['name' => 'menu order']);
+        Permission::create(['name' => 'menu defect']);
         Permission::create(['name' => 'menu report']);
         Permission::create(['name' => 'menu user']);
         Permission::create(['name' => 'menu storage']);
@@ -37,6 +38,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // create page permissions
         Permission::create(['name' => 'order user all']);
 
+        Permission::create(['name' => 'report chart']);
         Permission::create(['name' => 'report balance']);
         Permission::create(['name' => 'report order']);
         Permission::create(['name' => 'report storage']);
@@ -54,9 +56,9 @@ class RolesAndPermissionsSeeder extends Seeder
         	'profile edit personal'
         ]);
         $managerRole->givePermissionTo([
-        	'menu dashboard', 'menu order', 'menu report', 'menu payment', 'menu user',
+        	'menu dashboard', 'menu order', 'menu report', 'menu payment', 'menu user', 'menu defect',
         	'order user all',
-        	'report balance', 'report order', 'report storage', 'report user all',
+        	'report chart', 'report balance', 'report order', 'report storage', 'report user all',
         	'profile edit personal'
         ]);
         $superAdminRole->givePermissionTo(Permission::all());

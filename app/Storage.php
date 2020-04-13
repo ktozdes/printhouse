@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Storage extends Model
 {
-    protected $fillable = ['name', 'quantity', 'global_quantity_before', 'global_quantity_after', 'local_quantity_before', 'local_quantity_after', 'price', 'used_storage_id', 'order_id', 'plate_id', 'user_id', 'manager_id'];
+    protected $fillable = ['name', 'quantity', 'global_quantity_before', 'global_quantity_after', 'local_quantity_before', 'local_quantity_after', 'price', 'comment', 'used_storage_id', 'order_id', 'plate_id', 'user_id', 'manager_id'];
 
     public function order()
     {

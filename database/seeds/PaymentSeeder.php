@@ -15,7 +15,7 @@ class PaymentSeeder extends Seeder
     	DB::table('payments')->truncate();
         factory('App\Payment', 8)->create(['name' => 'payment']);
         Order::where('status_id', 3)->each(function ($order){
-            $payment = factory('App\Payment')->create(['name' => 'order', 'manager_id'=> $order->id]); 
+            $payment = factory('App\Payment')->create(['name' => 'order', 'comment'=> $order->id]); 
             $order->payment_id = $payment->id;
             $order->save();
         });

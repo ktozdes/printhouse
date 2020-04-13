@@ -31,7 +31,7 @@ class ReportController extends Controller
             $searchFilter[] = ['user_id', '=', $request->user_id];
         }
         if (isset( $request->start_time )) {
-            $searchFilter[] = ['payments.created_at', '>=', $request->start_time];
+            $searchFilter[] = ['payments.created_at', '>=', $request->start_time . ' 00:00:01'];
         }
         if (isset( $request->end_time)) {
             $searchFilter[] = ['payments.created_at', '<=', $request->end_time . ' 23:59:59'];
@@ -183,5 +183,27 @@ class ReportController extends Controller
             'status' => 'success',
             'storages' => $storages,
         ]);
+    }
+
+
+
+    public function revenue(Request $request)
+    {
+
+    }
+
+    public function orderByUsers(Request $request)
+    {
+        
+    }
+
+    public function platePopularity(Request $request)
+    {
+        
+    }
+
+    public function monthlySale(Request $request)
+    {
+        
     }
 }

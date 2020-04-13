@@ -22,6 +22,7 @@ class CreateStoragesTable extends Migration
             $table->integer('local_quantity_before')->nullable();
             $table->integer('local_quantity_after')->nullable();
             $table->float('price', 10, 2)->nullable();
+            $table->text('comment')->nullable();
 
             $table->bigInteger('used_storage_id')->nullable();
             $table->bigInteger('order_id')->nullable();
