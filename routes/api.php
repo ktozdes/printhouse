@@ -48,6 +48,7 @@ Route::post('/order/destroy', 'OrderController@destroy')->middleware(['cors', 't
 
 
 
+Route::get('/report/chart_data', 'ReportController@chart_data')->middleware(['cors', 'token', 'permission:report chart']);
 Route::get('/report/balance', 'ReportController@balance')->middleware(['cors', 'token']);
 Route::get('/report/order', 'ReportController@order')->middleware(['cors', 'token']);
 Route::get('/report/storage', 'ReportController@storage')->middleware(['cors', 'token']);

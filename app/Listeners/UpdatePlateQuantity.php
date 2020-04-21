@@ -175,6 +175,14 @@ class UpdatePlateQuantity
                 'manager'   => User::find($event->data['manager_id']),
             ]));
         }
+        else if (isset($event->data['name']) && $event->data['name'] == 'defect') {
+            event(new PaymentWasCreated([
+                'name'      => 'defect',
+                'amount'    => ((-1) * $orderPrice * $event->data['quantity']),
+                'user'      => User::find($event->data['manager_id']),
+                'manager'   => User::find($event->data['manager_id']),
+            ]));
+        }
     }
 
     private function updateInsertStorage($storage) {

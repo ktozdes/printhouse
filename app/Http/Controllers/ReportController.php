@@ -8,6 +8,7 @@ use App\Payment;
 use App\Order;
 use App\Storage;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ReportController extends Controller
 {
@@ -18,6 +19,30 @@ class ReportController extends Controller
      */
 
 
+    public function chart_data(Request $request)
+    {
+        $searchFilter = [];
+        $sortBy = 'payments.created_at';
+        $dir = 'desc';
+        
+        
+
+        $revenue = $this->revenue($request);
+        $orderByUsers = $this->orderByUsers($request);
+        $platesByPopularity = $this->platesByPopularity($request);
+        $salesByMonth = $this->salesByMonth($request);
+        $salesByManager = $this->salesByManager($request);
+
+        return response()->json([
+            'status' => 'success',
+            'revenue' => $revenue,
+            'order_by_user' => $orderByUsers,
+            'plates_by_popularity' => $platesByPopularity,
+            'sales_by_month' => $salesByMonth,
+            'sales_by_manager' => $salesByManager,
+        ]);
+    }
+    
     public function balance(Request $request)
     {
         $searchFilter = [];
@@ -60,7 +85,6 @@ class ReportController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'ddd' => $searchFilter,
             'payments' => $payments,
         ]);
     }
@@ -189,21 +213,272 @@ class ReportController extends Controller
 
     public function revenue(Request $request)
     {
+        $searchFilter = [];
+        if (isset( $request->start_time )) {
+            $searchFilter[] = ['payments.created_at', '>=', $request->start_time . ' 00:00:01'];
+        }
+        if (isset( $request->end_time)) {
+            $searchFilter[] = ['payments.created_at', '<=', $request->end_time . ' 23:59:59'];
+        }
 
+        $payments = DB::table('payments')
+            ->select(DB::raw("name, sum(amount) as value"))
+            ->where( $searchFilter )
+            ->groupBy('name')
+            ->get();
+        $totalExpense = 0;
+        $totalPaid = 0;
+        $labels = [
+            'order' => [
+                'name' => 'Заказ',
+                'bgcolor' => 'deeppink'
+            ],
+            'defect' => [
+                'name' => 'Брак',
+                'bgcolor' => 'deeppink'
+            ],
+            'expense' => [
+                'name' => 'Расход',
+                'bgcolor' => 'deeppink'
+            ],
+            'payment' => [
+                'name' => 'Оплата',
+                'bgcolor' => 'limegreen'
+            ],
+            'income' => [
+                'name' => 'Приход',
+                'bgcolor' => 'limegreen'
+            ],
+            'profit' => [
+                'name' => 'Прибыль',
+                'bgcolor' => 'orange'
+            ]
+        ];
+
+        $returnValue = [];
+        $returnValue['label'] = [];
+        if (count($payments) > 0 ) {
+            foreach ($payments as $key => $singleRow) {
+                if (!in_array($labels[$singleRow->name]['name'], $returnValue['label'])) {
+                    $returnValue['label'][] = $labels[$singleRow->name]['name'];
+                }
+                $returnValue['value'][0]['data'][] = abs($singleRow->value);
+                $returnValue['value'][0]['backgroundColor'][] = $labels[$singleRow->name]['bgcolor'];
+                $returnValue['value'][0]['label'] = 'Значение';
+                if ($singleRow->name == 'order' || $singleRow->name == 'defect') {
+                    $totalExpense += abs($singleRow->value);
+                }
+                else if ($singleRow->name == 'payment'){
+                    $totalPaid = abs($singleRow->value);
+                }
+            }
+            $returnValue['value'][0]['data'][] = $totalExpense;
+            $returnValue['value'][0]['backgroundColor'][] = $labels['expense']['bgcolor'];
+            $returnValue['label'][] = $labels['expense']['name'];
+
+            $returnValue['value'][0]['data'][] = $totalPaid - $totalExpense;
+            $returnValue['value'][0]['backgroundColor'][] = $labels['profit']['bgcolor'];
+            $returnValue['label'][] = $labels['profit']['name'];
+        }
+        return $returnValue;
     }
 
     public function orderByUsers(Request $request)
     {
-        
+        $searchFilter = [];
+        $paidFilter = [];
+        if (isset( $request->start_time )) {
+            $searchFilter[] = ['orders.created_at', '>=', $request->start_time . ' 00:00:01'];
+            $paidFilter[] = ['created_at', '>=', $request->start_time . ' 00:00:01'];
+        }
+        if (isset( $request->end_time)) {
+            $searchFilter[] = ['orders.created_at', '<=', $request->end_time . ' 23:59:59'];
+            $paidFilter[] = ['created_at', '<=', $request->end_time . ' 23:59:59'];
+        }
+        $paidFilter[] = ['name', '=', 'payment'];
+
+        $result = DB::table('orders')
+            ->select(DB::raw("orders.user_id, users.name, sum(ABS(payments.amount)) as amount, sum(quantity) as quantity, income_payment.paid"))
+            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->join('payments', 'orders.payment_id', '=', 'payments.id')
+            ->leftJoinSub(
+                DB::table('storages')
+                ->select(DB::raw("order_id, SUM(quantity) as quantity"))
+                ->groupBy('order_id'),
+                'storage', function($join) {
+                $join->on('storage.order_id', '=', 'orders.id');
+            })
+            ->leftJoinSub(
+                DB::table('payments')
+                ->select(DB::raw("user_id as user_id, SUM(amount) as paid"))
+                ->where($paidFilter)
+                ->groupBy('user_id'),
+                'income_payment', function($join) {
+                $join->on('income_payment.user_id', '=', 'orders.user_id');
+            })
+            ->where( $searchFilter )
+            ->groupBy('orders.user_id')
+            ->orderBy('amount', 'asc')
+            ->get();
+        $labels = [
+            'Заказано',
+            'Оплачено',
+            'Прибыль',
+        ];
+
+        $returnValue = [];
+        $returnValue['label'] = [];
+        if (count($result) > 0 ) {
+            foreach ($result as $key => $singleRow) {
+                if (!in_array($singleRow->name, $returnValue['label'])) {
+                    $returnValue['label'][] = $singleRow->name;
+                }
+                foreach ($labels as $key => $singleLabel) {
+                    $value = $singleRow->amount;
+                    if ($singleLabel == 'Оплачено') {
+                        $value = $singleRow->paid;
+                    }
+                    else if ($singleLabel == 'Прибыль'){
+                        $value = $singleRow->paid - $singleRow->amount;
+                    }
+                    $returnValue['value'][$key]['data'][] = $value;
+                    $returnValue['value'][$key]['label'] = $singleLabel;
+                }
+            }
+        }
+        return $returnValue;
+
     }
 
-    public function platePopularity(Request $request)
+    public function platesByPopularity(Request $request)
     {
-        
+        $searchFilter = [];
+        if (isset( $request->start_time )) {
+            $searchFilter[] = ['storages.created_at', '>=', $request->start_time . ' 00:00:01'];
+        }
+        if (isset( $request->end_time)) {
+            $searchFilter[] = ['storages.created_at', '<=', $request->end_time . ' 23:59:59'];
+        }
+
+        $plates = DB::table('storages')
+            ->select(DB::raw("storages.name as storage_name, sum(storages.quantity) as quantity, plates.name as plate_name"))
+            ->join('plates', 'storages.plate_id', '=', 'plates.id')
+            ->where( $searchFilter )
+            ->where(function($q) {
+                $q->where('storages.name', '=', 'order')
+                ->orWhere('storages.name', '=', 'defect');
+            })
+            ->groupBy('storage_name', 'plate_name')
+            ->orderBy('plate_name', 'asc')
+            ->get();
+        $returnValue = [];
+        $returnValue['label'] = [];
+        foreach ($plates as $key => $singleRow) {
+            if (!in_array($singleRow->plate_name, $returnValue['label'])) {
+                $returnValue['label'][] = $singleRow->plate_name;
+            }
+
+
+            if (!isset($returnValue['value'][$singleRow->plate_name])) {
+                $returnValue['value'][$singleRow->plate_name]['value'] = $singleRow->quantity;
+            }
+            else {
+                $returnValue['value'][$singleRow->plate_name]['value'] += $singleRow->quantity;
+            }
+            $returnValue['value'][$singleRow->plate_name]['type'][$singleRow->storage_name] = $singleRow->quantity;
+        }
+        $returnValue['value'] = array_values($returnValue['value']);
+        return $returnValue;
     }
 
-    public function monthlySale(Request $request)
+    public function salesByMonth(Request $request)
     {
-        
+        $twoYearsAgo = Carbon::now()->subYears(2);
+        $payments = DB::table('payments')
+            ->select(DB::raw("SUM(amount) as value, concat_ws(' ', YEAR(created_at), MONTHNAME(created_at)) as name"))
+            ->where( 'payments.created_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01')
+            ->groupBy( DB::raw("concat_ws(' ', YEAR(created_at), MONTHNAME(created_at))") )
+            ->orderBy( DB::raw("concat_ws(' ', YEAR(created_at), MONTHNAME(created_at))") )
+            ->get();
+        $currentTotal = 0;
+        $returnValue = [];
+        $returnValue['value'] = [];
+        if (count($payments) > 0 ) {
+            foreach ($payments as $key => $singleRow) {
+                $currentTotal += $singleRow->value;
+                $returnValue['label'][] = $singleRow->name;
+                $returnValue['value'][0]['data'][] = $singleRow->value;
+                $returnValue['value'][0]['label'] = 'Прибыль';
+
+                $returnValue['value'][1]['data'][] = round($currentTotal / ($key+1), 2);
+                $returnValue['value'][1]['label'] = 'Среднее';
+
+                //data: [65, 59, 80, 81, 56, 55, 40], label: 'Series A'
+            }
+            $returnValue['value'][2]['data'] = array_fill(0, count($payments), round($currentTotal / count($payments), 2));
+            $returnValue['value'][2]['label'] = 'Общее Среднее';
+        }
+        return $returnValue;
+    }
+
+
+    public function salesByManager(Request $request)
+    {
+        $twoYearsAgo = Carbon::now()->subYears(2);
+        $managersSales = DB::table('storages')
+            ->select(DB::raw("sum(storages.quantity) as quantity, users.name as manager_name, sum( abs( payments.amount ) ) as amount,concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)) as date_name"))
+            ->join('users', 'users.id', '=', 'storages.manager_id')
+            ->leftJoin('orders', 'orders.id', '=', 'storages.order_id')
+            ->leftJoin('payments', 'payments.id', '=', 'orders.payment_id')
+            ->where([
+                ['orders.status_id', 3],
+                ['storages.updated_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01']
+            ] )
+            ->groupBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
+            ->orderBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
+            ->get();
+        $managersDefect = DB::table('storages')
+            ->select(DB::raw("sum(quantity) as quantity, sum(quantity * price) as amount, users.name as manager_name, concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)) as date_name"))
+            ->join('users', 'users.id', '=', 'storages.manager_id')
+            ->where([
+                ['storages.name', 'defect'],
+                ['storages.updated_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01']
+            ] )
+            ->groupBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
+            ->orderBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
+            ->get();
+
+        $returnValue = [];
+        $returnValue['value'] = [];
+        if (count($managersSales) > 0 ) {
+            foreach ($managersSales as $key => $sale) {
+                $returnValue['label'][] = $sale->date_name;
+                $returnValue['value'][$sale->manager_name][0]['data'][] = $sale->amount;
+                $returnValue['value'][$sale->manager_name][0]['label'] = 'Заказано';
+                $returnValue['value'][$sale->manager_name][1]['data'][] = $sale->quantity;
+                $returnValue['value'][$sale->manager_name][1]['label'] = 'Продано Пластин';
+
+                $defect = $this->findValueInArray($managersDefect, $sale->manager_name, $sale->date_name);
+                if ($defect) {
+                    $returnValue['value'][$sale->manager_name][2]['data'][] = $defect->amount;
+                    $returnValue['value'][$sale->manager_name][2]['label'] = 'Цена Брака';
+                    $returnValue['value'][$sale->manager_name][3]['data'][] = $defect->quantity;
+                    $returnValue['value'][$sale->manager_name][3]['label'] = 'Кол. Брак Пласт';
+                }
+                //data: [65, 59, 80, 81, 56, 55, 40], label: 'Series A'
+            }
+            //$returnValue['value'] = array_values($returnValue['value']);
+        }
+        return $returnValue;
+    }
+
+    private function findValueInArray($payload, $name, $date)
+    {
+        foreach ($payload as $key => $value) {
+            if ($value->manager_name == $name && $value->date_name == $date){
+                return $value;
+            }
+        }
+        return false;
     }
 }

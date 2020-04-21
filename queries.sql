@@ -19,8 +19,6 @@ left join
         as outp on inp.id = outp.used_storage_id 
 where inp.name = 'storage' and plate_id = 1 and (min_value > 0 OR min_value is null)
 
-
-
 update payments set manager_id = 1 where 1
 
 
@@ -31,3 +29,32 @@ left join plates as plate on plate.id = storage.plate_id
 left join plate_user on plate_user.user_id = orders.user_id and plate_user.plate_id = storage.plate_id
 
 where orders.id = 101
+
+
+
+
+SELECT orders.user_id, sum(payments.amount) as amount, sum(storage.quantity) as quantity, income_payment.income_amount
+FROM `orders`  
+
+inner join (SELECT order_id, SUM(quantity) as quantity
+    FROM storages 
+    group by order_id) as storage on storage.order_id = orders.id
+
+inner join (SELECT user_id as user_id, SUM(amount) as income_amount
+    FROM payments
+    where name = 'payment'
+    group by user_id) as income_payment on income_payment.user_id = orders.user_id
+
+inner join payments on orders.payment_id = payments.id
+
+where orders.created_at >= '2000/3/1 00:00:01'  
+group by orders.user_id
+ORDER BY `orders`.`user_id`  DESC
+
+
+
+SELECT storages.name, sum(storages.quantity) as quantity, plates.name FROM `storages` 
+inner join plates on plates.id = storages.plate_id
+where storages.name = 'order' OR storages.name = 'defect'
+group by storages.name, plates.name
+ORDER BY plates.name

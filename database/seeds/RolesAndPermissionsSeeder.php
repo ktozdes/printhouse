@@ -58,7 +58,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $managerRole->givePermissionTo([
         	'menu dashboard', 'menu order', 'menu report', 'menu payment', 'menu user', 'menu defect',
         	'order user all',
-        	'report chart', 'report balance', 'report order', 'report storage', 'report user all',
+        	'report balance', 'report order', 'report storage', 'report user all',
         	'profile edit personal'
         ]);
         $superAdminRole->givePermissionTo(Permission::all());
