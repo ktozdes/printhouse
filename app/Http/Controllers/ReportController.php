@@ -31,7 +31,6 @@ class ReportController extends Controller
         $orderByUsers = $this->orderByUsers($request);
         $platesByPopularity = $this->platesByPopularity($request);
         $salesByMonth = $this->salesByMonth($request);
-        $salesByManager = $this->salesByManager($request);
 
         return response()->json([
             'status' => 'success',
@@ -39,8 +38,60 @@ class ReportController extends Controller
             'order_by_user' => $orderByUsers,
             'plates_by_popularity' => $platesByPopularity,
             'sales_by_month' => $salesByMonth,
-            'sales_by_manager' => $salesByManager,
         ]);
+    }
+
+    public function manager(Request $request)
+    {
+        $searchFilter = [];
+        $sortBy = 'payments.created_at';
+        $dir = 'desc';
+        
+        if ($request->user->hasRole('manager')) {
+            $searchFilter[] = ['storages.manager_id', '=', $request->user->id];
+        }
+        else if (isset($request->user_id) && is_numeric($request->user_id)) {
+            $searchFilter[] = ['storages.manager_id', '=', $request->user_id];
+        }
+        if (isset( $request->start_time )) {
+            $searchFilter[] = ['storages.updated_at', '>=', $request->start_time . ' 00:00:01'];
+        }
+        if (isset( $request->end_time)) {
+            $searchFilter[] = ['storages.updated_at', '<=', $request->end_time . ' 23:59:59'];
+        }
+
+        $managersReports = DB::table('storages')
+            ->select(DB::raw("users.name as manager_name,
+            SUM(IF(storages.name = 'order' AND orders.status_id = 3, storages.quantity, 0)) AS order_quantity,
+            SUM(IF(storages.name = 'defect', storages.quantity, 0)) AS defect_quantity,
+            SUM(IF(storages.name = 'order' AND payments.amount IS NOT NULL, abs( payments.amount ) , 0)) AS order_amount,
+            SUM(IF(storages.name = 'defect', storages.quantity * storages.price, 0)) AS defect_amount,
+            sum(storages.quantity) as total_quantity, 
+            concat_ws('-', YEAR(storages.updated_at), MONTH(storages.updated_at)) as date_name"))
+        ->join('users', 'users.id', '=', 'storages.manager_id')
+        ->leftJoin('orders', function($plateUserQuery) {
+            $plateUserQuery->on('orders.id', '=', 'storages.order_id');
+            $plateUserQuery->on('orders.status_id', '=', DB::raw(3));
+        })
+        ->leftJoin('payments', 'payments.id', '=', 'orders.payment_id')
+        ->where( $searchFilter )
+        ->where(function($q) {
+            $q->where('storages.name', '=', 'order')
+            ->orWhere('storages.name', '=', 'defect');
+        })
+        ->groupBy( DB::raw("concat_ws('-', YEAR(storages.updated_at), MONTH(storages.updated_at)), users.name") )
+        ->orderBy( DB::raw("concat_ws('-', YEAR(storages.updated_at), MONTH(storages.updated_at)) desc, users.name") )
+        ->paginate(25);
+        
+        $returnValue = [];
+        if (count($managersReports) > 0 ) {
+            foreach ($managersReports as $key => $row) {
+                if ($row->order_quantity > 0 || $row->defect_quantity > 0) {
+                    $returnValue[] = $row;
+                }
+            }
+        }
+        return $returnValue;
     }
     
     public function balance(Request $request)
@@ -93,7 +144,7 @@ class ReportController extends Controller
     public function order(Request $request)
     {
         $searchFilter = [];
-        $sortBy = 'orders.created_at';
+        $sortBy = 'orders.updated_at';
         $dir = 'desc';
         
         if ($request->user->hasRole('client')) {
@@ -103,10 +154,10 @@ class ReportController extends Controller
             $searchFilter[] = ['orders.user_id', '=', $request->user_id];
         }
         if (isset( $request->start_time )) {
-            $searchFilter[] = ['orders.created_at', '>=', $request->start_time];
+            $searchFilter[] = ['orders.updated_at', '>=', $request->start_time];
         }
         if (isset( $request->end_time)) {
-            $searchFilter[] = ['orders.created_at', '<=', $request->end_time . ' 23:59:59'];
+            $searchFilter[] = ['orders.updated_at', '<=', $request->end_time . ' 23:59:59'];
         }
         if (isset( $request->status_id ) && $request->status_id != 'all') {
             $searchFilter[] = ['orders.status_id', '=',  $request->status_id];
@@ -122,11 +173,14 @@ class ReportController extends Controller
             $sortBy = 'orders.price';
             $dir = 'asc';
         }
-        $orders = Order::select(['c', 'm', 'y', 'k', 'pantone', 'orders.user_id as user_id', 'orders.comment as comment', 'status_id', 'status.name as status_name',
-            'payment.amount as price', 'storage.quantity as quantity', 'storage.plate_id', 
-            'plate.name as plate_name', 'user.name as user_name', 'orders.created_at as created_at'])
+        $orders = DB::table('orders')
+            ->select(DB::raw('c, m, y, k, pantone, orders.user_id as user_id, orders.comment as comment, status_id, status.name as status_name, orders.updated_at as created_at,
+                abs(payment.amount) as price, storage.quantity as quantity, storage.plate_id, 
+                plate.name as plate_name, 
+                user.name as user_name, manager.name as manager_name'))
             ->join('statuses as status', 'status.id', '=', 'orders.status_id')
             ->join('users as user', 'user.id', '=', 'orders.user_id')
+            ->join('users as manager', 'manager.id', '=', 'orders.manager_id')
             ->leftJoinSub(
                 DB::table('storages')
                 ->select(DB::raw("order_id, max(id) as id, count(id) as storage_number, AVG(plate_id) as plate_id, sum(quantity) as quantity"))
@@ -208,8 +262,6 @@ class ReportController extends Controller
             'storages' => $storages,
         ]);
     }
-
-
 
     public function revenue(Request $request)
     {
@@ -417,57 +469,6 @@ class ReportController extends Controller
             }
             $returnValue['value'][2]['data'] = array_fill(0, count($payments), round($currentTotal / count($payments), 2));
             $returnValue['value'][2]['label'] = 'Общее Среднее';
-        }
-        return $returnValue;
-    }
-
-
-    public function salesByManager(Request $request)
-    {
-        $twoYearsAgo = Carbon::now()->subYears(2);
-        $managersSales = DB::table('storages')
-            ->select(DB::raw("sum(storages.quantity) as quantity, users.name as manager_name, sum( abs( payments.amount ) ) as amount,concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)) as date_name"))
-            ->join('users', 'users.id', '=', 'storages.manager_id')
-            ->leftJoin('orders', 'orders.id', '=', 'storages.order_id')
-            ->leftJoin('payments', 'payments.id', '=', 'orders.payment_id')
-            ->where([
-                ['orders.status_id', 3],
-                ['storages.updated_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01']
-            ] )
-            ->groupBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
-            ->orderBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
-            ->get();
-        $managersDefect = DB::table('storages')
-            ->select(DB::raw("sum(quantity) as quantity, sum(quantity * price) as amount, users.name as manager_name, concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)) as date_name"))
-            ->join('users', 'users.id', '=', 'storages.manager_id')
-            ->where([
-                ['storages.name', 'defect'],
-                ['storages.updated_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01']
-            ] )
-            ->groupBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
-            ->orderBy( DB::raw("concat_ws(' ', YEAR(storages.updated_at), MONTHNAME(storages.updated_at)), users.name") )
-            ->get();
-
-        $returnValue = [];
-        $returnValue['value'] = [];
-        if (count($managersSales) > 0 ) {
-            foreach ($managersSales as $key => $sale) {
-                $returnValue['label'][] = $sale->date_name;
-                $returnValue['value'][$sale->manager_name][0]['data'][] = $sale->amount;
-                $returnValue['value'][$sale->manager_name][0]['label'] = 'Заказано';
-                $returnValue['value'][$sale->manager_name][1]['data'][] = $sale->quantity;
-                $returnValue['value'][$sale->manager_name][1]['label'] = 'Продано Пластин';
-
-                $defect = $this->findValueInArray($managersDefect, $sale->manager_name, $sale->date_name);
-                if ($defect) {
-                    $returnValue['value'][$sale->manager_name][2]['data'][] = $defect->amount;
-                    $returnValue['value'][$sale->manager_name][2]['label'] = 'Цена Брака';
-                    $returnValue['value'][$sale->manager_name][3]['data'][] = $defect->quantity;
-                    $returnValue['value'][$sale->manager_name][3]['label'] = 'Кол. Брак Пласт';
-                }
-                //data: [65, 59, 80, 81, 56, 55, 40], label: 'Series A'
-            }
-            //$returnValue['value'] = array_values($returnValue['value']);
         }
         return $returnValue;
     }

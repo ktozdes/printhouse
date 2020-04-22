@@ -19,11 +19,29 @@ class UserController extends Controller
 
     public function list(Request $request)
     {
-        $users = User::role('client')->get(['id', 'name', 'fullname', 'company', 'phone1', 'balance', 'rank', 'balance']);
+        $users = User::role('client')->get(['id', 'name', 'fullname', 'company', 'phone1', 'balance', 'rank']);
         
         return response()->json([
             'status' => 'success',
             'users' => $users
+        ]);
+        //return response()->json('plates' =>$plates]);
+    }
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+
+    public function listManager(Request $request)
+    {
+        $managers = User::role('manager')->get(['id', 'name', 'fullname', 'company', 'phone1', 'balance', 'rank']);
+        $admins = User::role('super-admin')->get(['id', 'name', 'fullname', 'company', 'phone1', 'balance', 'rank']);
+        
+        return response()->json([
+            'status' => 'success',
+            //'users' => $managers
+            'users' => $managers->merge($admins)
         ]);
         //return response()->json('plates' =>$plates]);
     }

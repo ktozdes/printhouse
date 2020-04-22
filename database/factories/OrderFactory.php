@@ -21,8 +21,8 @@ $factory->define(Order::class, function (Faker $faker,$params) {
         'urgent' => $faker->boolean($chanceOfGettingTrue = 10),
         'deliver' => $faker->boolean($chanceOfGettingTrue = 70),
         'address' => $faker->address,
-        'user_id' => User::all()->random()->id,
-        'manager_id' => User::all()->random()->id,
+        'user_id' => $faker->numberBetween(4, 7),
+        'manager_id' => $faker->numberBetween(1, 3),
         'status_id'  => Status::all()->random()->id,
         'created_at' =>$date,
         'updated_at' =>$date

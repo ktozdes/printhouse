@@ -23,8 +23,8 @@ $factory->define(Storage::class, function (Faker $faker, $params) {
             'global_quantity_before' => $plate->quantity,
             'global_quantity_after' => $plate->quantity + $quantity,
             'plate_id'   =>  $plate->id,
-            'user_id'    => User::all()->random()->id,
-            'manager_id' => User::all()->random()->id,
+            'user_id'    => $faker->numberBetween(4, 7),
+            'manager_id' => $faker->numberBetween(1, 3),
             
             'created_at' =>$date,
             'updated_at' =>$date
@@ -153,8 +153,8 @@ $factory->define(Storage::class, function (Faker $faker, $params) {
                     'global_quantity_before' => $plate->quantity,
                     'global_quantity_after' => $plate->quantity + $quickQuantity,
                     'plate_id'   =>  $plate->id,
-                    'user_id'    => User::all()->random()->id,
-                    'manager_id' => User::all()->random()->id,
+                    'user_id'    => $faker->numberBetween(4, 7),
+                    'manager_id' => $faker->numberBetween(1, 3),
                     
                     'created_at' =>$date,
                     'updated_at' =>$date
@@ -207,6 +207,9 @@ $factory->define(Storage::class, function (Faker $faker, $params) {
                 $plate->update();
             }
         }
+    }
+    else{
+        $storage['comment'] = 'rrrr';
     }
     return $storage;
 });

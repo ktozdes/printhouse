@@ -24,6 +24,7 @@ Route::get('/user/edit', 'UserController@edit')->middleware(['cors', 'token']);
 Route::post('/user/update', 'UserController@update')->middleware(['cors', 'token']);
 Route::post('/user/store', 'UserController@store')->middleware(['cors', 'token', 'permission:menu user']);
 Route::get('/user/list', 'UserController@list')->middleware(['cors', 'token', 'permission:menu user']);
+Route::get('/user/list_manager', 'UserController@listManager')->middleware(['cors', 'token', 'permission:report manager']);
 
 Route::get('/plate/list', 'PlateController@list')->middleware(['cors', 'token']);
 Route::get('/plate/edit', 'PlateController@edit')->middleware(['cors', 'token', 'role:super-admin']);
@@ -46,9 +47,8 @@ Route::post('/order/update', 'OrderController@update')->middleware(['cors', 'tok
 Route::post('/order/change_status', 'OrderController@changeStatus')->middleware(['cors', 'token', 'permission:order user all']);
 Route::post('/order/destroy', 'OrderController@destroy')->middleware(['cors', 'token']);
 
-
-
 Route::get('/report/chart_data', 'ReportController@chart_data')->middleware(['cors', 'token', 'permission:report chart']);
+Route::get('/report/manager', 'ReportController@manager')->middleware(['cors', 'token', 'permission:report manager']);
 Route::get('/report/balance', 'ReportController@balance')->middleware(['cors', 'token']);
 Route::get('/report/order', 'ReportController@order')->middleware(['cors', 'token']);
 Route::get('/report/storage', 'ReportController@storage')->middleware(['cors', 'token']);
