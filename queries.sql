@@ -19,8 +19,6 @@ left join
         as outp on inp.id = outp.used_storage_id 
 where inp.name = 'storage' and plate_id = 1 and (min_value > 0 OR min_value is null)
 
-update payments set manager_id = 1 where 1
-
 
 
 select orders.id, storage.storage_id, storage.plate_id, plate.price as plate_price, plate_user.price as user_price from orders

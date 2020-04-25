@@ -19,6 +19,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \App\Http\Middleware\Cors::class,
+        //\App\Http\Middleware\Response::class,
         //App\Http\Middleware\TokenApi::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
     ];
@@ -70,6 +71,7 @@ class Kernel extends HttpKernel
 
         'cors' => \App\Http\Middleware\Cors::class,
         'token' => \App\Http\Middleware\TokenApi::class,
+        'response' => \App\Http\Middleware\Response::class,
     ];
 
     /**
@@ -80,6 +82,7 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $middlewarePriority = [
+        \App\Http\Middleware\Cors::class,
         \Illuminate\Session\Middleware\StartSession::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
         \App\Http\Middleware\Authenticate::class,

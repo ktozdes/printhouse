@@ -215,6 +215,13 @@ class ReportController extends Controller
         $sortBy = 'storages.created_at';
         $dir = 'desc';
 
+        $select = [
+            'storages.name', 'storages.quantity', 'storages.price', DB::raw('storages.quantity * storages.price as summa'), 
+            'storages.plate_id', 'storages.manager_id', 'storages.created_at as created_at',
+            'plates.name as plate_name', 'users.name as manager_name'];
+        if ($request->user->can('menu storage')) {
+            $select = array_merge($select, ['inp.price as input_price', DB::raw('storages.quantity * inp.price as input_summa'), DB::raw('(storages.price - inp.price) * storages.quantity as total')]);
+        }
         
         if (isset( $request->start_time )) {
             $searchFilter[] = ['storages.created_at', '>=', $request->start_time];
@@ -250,12 +257,13 @@ class ReportController extends Controller
             $sortBy = 'storages.price';
             $dir = 'asc';
         }
-        $storages = Storage::select(['storages.name', 'storages.quantity', 'storages.price', DB::raw('storages.quantity * storages.price as summa'), 'storages.plate_id', 'storages.manager_id', 'plates.name as plate_name', 'users.name as manager_name', 'storages.created_at as created_at'])
+        $storages = Storage::select($select)
             ->join('users', 'users.id', '=', 'storages.manager_id')
             ->join('plates', 'plates.id', '=', 'storages.plate_id')
+            ->leftJoin('storages as inp', 'inp.id', '=', 'storages.used_storage_id')
             ->where( $searchFilter )
             ->orderBy($sortBy, $dir)
-            ->paginate(25);
+            ->get();
 
         return response()->json([
             'status' => 'success',
@@ -447,10 +455,10 @@ class ReportController extends Controller
     {
         $twoYearsAgo = Carbon::now()->subYears(2);
         $payments = DB::table('payments')
-            ->select(DB::raw("SUM(amount) as value, concat_ws(' ', YEAR(created_at), MONTHNAME(created_at)) as name"))
+            ->select(DB::raw("SUM(amount) as value, concat_ws('-', YEAR(created_at), MONTH(created_at)) as name"))
             ->where( 'payments.created_at', '>=', $twoYearsAgo->format('Y/m/d') . ' 00:00:01')
-            ->groupBy( DB::raw("concat_ws(' ', YEAR(created_at), MONTHNAME(created_at))") )
-            ->orderBy( DB::raw("concat_ws(' ', YEAR(created_at), MONTHNAME(created_at))") )
+            ->groupBy( DB::raw("concat_ws('-', YEAR(created_at), MONTH(created_at))") )
+            ->orderBy( DB::raw("concat_ws('-', YEAR(created_at), MONTH(created_at))") )
             ->get();
         $currentTotal = 0;
         $returnValue = [];

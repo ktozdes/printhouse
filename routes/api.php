@@ -40,7 +40,7 @@ Route::post('/payment/store', 'PaymentController@store')->middleware(['cors', 't
 Route::post('/file/upload', 'FileController@upload')->middleware(['cors', 'token']);
 Route::post('/file/destroy', 'FileController@destroy')->middleware(['cors', 'token']);
 
-Route::get('/order/list', 'OrderController@list')->middleware(['cors', 'token']);
+Route::get('/order/list', 'OrderController@list')->middleware(['cors', 'token', 'response']);
 Route::post('/order/store', 'OrderController@store')->middleware(['cors', 'token']);
 Route::get('/order/edit', 'OrderController@edit')->middleware(['cors', 'token']);
 Route::post('/order/update', 'OrderController@update')->middleware(['cors', 'token']);
