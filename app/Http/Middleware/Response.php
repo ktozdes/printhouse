@@ -26,7 +26,7 @@ class Response
                     array_merge(
                         json_decode($response->content(), true),
                         [
-                            'plates' => Plate::all('id', 'name', 'quantity')
+                            'plate_number' => Plate::all('name', 'quantity')
                         ]
                     )
                 )
